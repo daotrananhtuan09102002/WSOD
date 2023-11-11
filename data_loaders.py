@@ -70,7 +70,7 @@ def get_data_loader(data_roots, batch_size,
     loaders = {
         'train': DataLoader(
             loader_dict['train'](
-                data_root=data_roots,
+                root=data_roots,
                 year='2007',
                 image_set='train',
                 transform=dataset_transforms['train'],
@@ -80,7 +80,7 @@ def get_data_loader(data_roots, batch_size,
             num_workers=2),
         'val': DataLoader(
             loader_dict['val'](
-                data_root=data_roots,
+                root=data_roots,
                 year='2007',
                 image_set='val',
                 transform=dataset_transforms['val'],
