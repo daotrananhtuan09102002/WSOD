@@ -1,6 +1,6 @@
 from tqdm import tqdm
-import wsol
-import wsol.method
+import wsod
+import wsod.method
 import os
 import torch
 import torch.nn as nn
@@ -60,7 +60,7 @@ class Trainer(object):
         num_classes = self._NUM_CLASSES_MAPPING[self.dataset_name]
         print("Loading model {}".format(self.architecture))
         arch = self.architecture
-        model = wsol.__dict__[arch](
+        model = wsod.__dict__[arch](
             dataset_name=self.dataset_name,
             architecture_type=self.architecture_type,
             pretrained=self.pretrained,
