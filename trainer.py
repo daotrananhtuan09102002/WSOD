@@ -4,6 +4,7 @@ import wsod.method
 import os
 import torch
 import torch.nn as nn
+import numpy as np
 
 
 class Trainer(object):
@@ -212,11 +213,11 @@ class Trainer(object):
                    os.path.join(self.log_dir, filename))
 
 
-    def save_checkpoint(self, epoch, checkpoint_path):
-        print("Saving checkpoint to {}".format(checkpoint_path))
+    def save_checkpoint(self, epoch):
         self._torch_save_model(
             f'{epoch}_checkpoint.pth.tar')
         
+
     def load_checkpoint(self, checkpoint_name):
         checkpoint_path = os.path.join(
             self.log_dir,
@@ -225,6 +226,26 @@ class Trainer(object):
             checkpoint = torch.load(checkpoint_path)
             self.model.load_state_dict(checkpoint['state_dict'], strict=True)
             print("Check {} loaded.".format(checkpoint_path))
+
+
+    def _compute_accuracy(self, loader, topk=(1,)):
+        num_correct = np.zeros((len(topk)))
+        num_images = 0
+
+        for i, (images, targets) in enumerate(loader):
+            images = images.cuda()
+            targets = targets.cuda()
+            output_dict = self.model_multi(images)
+            pred_topk = torch.argsort(output_dict['logits'], dim=1, descending=True)[:, :max(topk)]
+
+            for i_k, k in enumerate(topk):
+                co = (pred_topk[:, :k] == targets.unsqueeze(-1)).float()
+                num_correct[i_k] += torch.sum(torch.max(co, dim=1)[0]).item()
+            num_images += images.size(0)
+
+        classification_acc = num_correct / float(num_images) * 100
+
+        return classification_acc
 
 
     def train(self, warm=False):
