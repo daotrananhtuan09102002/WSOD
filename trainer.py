@@ -52,7 +52,7 @@ class Trainer(object):
         self.model = self._set_model()
         self.model_multi = torch.nn.DataParallel(self.model)
         self.bce_with_logits_loss = nn.BCEWithLogitsLoss().cuda()
-        self.accuracy = metrics.MultilabelAccuracy().cuda()
+        self.accuracy = metrics.MultilabelAccuracy().to('cuda')
         self.l1_loss = nn.L1Loss().cuda()
         self.optimizer = self._set_optimizer()
 
