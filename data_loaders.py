@@ -47,17 +47,16 @@ class VOCDataset(Dataset):
         return image, label_one_hot.int()
 
 def get_data_loader(data_roots, batch_size,
-                    resize_size, crop_size):
+                    resize_size):
     dataset_transforms = dict(
         train=transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
-            transforms.RandomCrop(crop_size),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
         ]),
         val=transforms.Compose([
-            transforms.Resize((crop_size, crop_size)),
+            transforms.Resize((resize_size, resize_size)),
             transforms.ToTensor(),
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
         ]))
