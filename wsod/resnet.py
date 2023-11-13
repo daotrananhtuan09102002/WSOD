@@ -108,10 +108,14 @@ class ResNetCam(nn.Module):
             probs = self.sigmoid(logits)
 
             if return_cam:
+                cams = dict()
                 feature_map = x.detach().clone()
-                cam_weights = self.fc.weight[labels]
-                cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
-                        feature_map).mean(1, keepdim=False)
+
+                for i in range(len(labels)):
+                    cam_weights = self.fc.weight[labels[i]]
+                    cams[labels[i]] = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
+                            feature_map).mean(1, keepdim=False)
+                    
                 return {'probs': probs, 'cams': cams}
             
             return {'probs': probs}
