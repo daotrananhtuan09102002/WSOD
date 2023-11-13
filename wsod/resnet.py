@@ -111,9 +111,9 @@ class ResNetCam(nn.Module):
                 cams = dict()
                 feature_map = x.detach().clone()
 
-                for i in range(len(labels)):
-                    cam_weights = self.fc.weight[labels[i]]
-                    cams[labels[i]] = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
+                for i in torch.nonzero(labels).squeeze().tolist():
+                    cam_weights = self.fc.weight[i]
+                    cams[i] = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
                             feature_map).mean(1, keepdim=False)
                     
                 return {'probs': probs, 'cams': cams}
