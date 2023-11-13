@@ -104,21 +104,24 @@ class ResNetCam(nn.Module):
         if self.training:
             return {'logits': logits}
         
-        if self.training == False:
-            probs = self.sigmoid(logits)
+        # training == False
+        probs = self.sigmoid(logits)
 
-            if return_cam:
-                cams = dict()
-                feature_map = x.detach().clone()
+        if return_cam:
+            cams = []
+            feature_map = x.detach().clone()
 
-                for i in torch.nonzero(labels).squeeze().tolist():
+            for label, feature in zip(labels, feature_map):
+                cam_per_image = dict()
+                for nonzeros in label.nonzero():
+                    i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
-                    cams[i] = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
-                            feature_map).mean(1, keepdim=False)
-                    
-                return {'probs': probs, 'cams': cams}
-            
-            return {'probs': probs}
+                    cam_per_image[i] = (cam_weights * feature).mean(1, keepdim=False)
+
+                cams.append(cam_per_image)
+            return {'probs': probs, 'cams': cams}
+        
+        return {'probs': probs}
 
 
     def _make_layer(self, block, planes, blocks, stride, use_latter=False):
