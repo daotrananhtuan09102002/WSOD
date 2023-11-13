@@ -110,17 +110,23 @@ class Trainer(object):
                     param_features.append(parameter)
                     param_features_name.append(name)
 
-        optimizer = torch.optim.SGD([
-            {'params': param_features, 'lr': self.lr},
-            {'params': param_classifiers,
-             'lr': self.lr * self.lr_classifier_ratio}],
+        optimizer = torch.optim.SGD(
+            [
+                {
+                    'params': param_features, 
+                    'lr': self.lr
+                },
+                {
+                    'params': param_classifiers,
+                    'lr': self.lr * self.lr_classifier_ratio
+                }
+            ],
             momentum=self.momentum,
             weight_decay=self.weight_decay,
             nesterov=True)
         return optimizer
 
     def _get_loss_alignment(self, feature, sim, target, eps=1e-15):
-
         def normalize_minmax(cams, eps=1e-15):
             """
             Args:
@@ -137,46 +143,28 @@ class Trainer(object):
             cams_minmax /= max_value.view(B, 1, 1) + eps
             return cams_minmax
 
-        B = target.size(0)
         feature_norm = torch.norm(feature, dim=1)
-        feature_norm_minmax = normalize_minmax(feature_norm)
-        sim_target_flat = sim[torch.arange(B), target].view(B, -1)
-        feature_norm_minmax_flat = feature_norm_minmax.view(B, -1)
-        if self.dataset_name == 'VOC':
-            sim_fg = (feature_norm_minmax_flat > self.sim_fg_thres).float()
-            sim_bg = (feature_norm_minmax_flat < self.sim_bg_thres).float()
+        feature_norm_minmax_flat = torch.flatten(normalize_minmax(feature_norm), start_dim=1)
 
-            sim_fg_mean = (sim_fg * sim_target_flat).sum(dim=1) / (sim_fg.sum(dim=1) + eps)
-            sim_bg_mean = (sim_bg * sim_target_flat).sum(dim=1) / (sim_bg.sum(dim=1) + eps)
-            loss_sim = torch.mean(sim_bg_mean - sim_fg_mean)
+        sim_flat = torch.flatten(sim, start_dim=2)
+        
+        # sim loss
+        sim_fg = (feature_norm_minmax_flat > 0.6).float()
+        sim_bg = (feature_norm_minmax_flat < 0.4).float()
 
-            norm_fg = (sim_target_flat > 0).float()
-            norm_bg = (sim_target_flat < 0).float()
+        sim_fg_mean = (sim_fg[:, None] * sim_flat).sum(dim=-1) / (sim_fg.sum(dim=-1) + eps)[:, None]
+        sim_bg_mean = (sim_bg[:, None] * sim_flat).sum(dim=-1) / (sim_bg.sum(dim=-1) + eps)[:, None]
+        loss_sim = torch.masked.masked_tensor(sim_bg_mean - sim_fg_mean, target.bool()).mean().get_data()
 
-            norm_fg_mean = (norm_fg * feature_norm_minmax_flat).sum(dim=1) / (norm_fg.sum(dim=1) + eps)
-            norm_bg_mean = (norm_bg * feature_norm_minmax_flat).sum(dim=1) / (norm_bg.sum(dim=1) + eps)
+        # norm loss
+        norm_fg = (sim_flat > 0).float()
+        norm_bg = (sim_flat < 0).float()
 
-            loss_norm = torch.mean(norm_bg_mean - norm_fg_mean)
-        elif self.dataset_name == 'CUB':
-            sim_fg = (feature_norm_minmax_flat > self.sim_fg_thres).float()
-            sim_bg = (feature_norm_minmax_flat < self.sim_bg_thres).float()
+        norm_fg_mean = (norm_fg * feature_norm_minmax_flat[:, None]).sum(dim=-1) / (norm_fg.sum(dim=-1) + eps)
+        norm_bg_mean = (norm_bg * feature_norm_minmax_flat[:, None]).sum(dim=-1) / (norm_bg.sum(dim=-1) + eps)
 
-            sim_fg_mean = (sim_fg * sim_target_flat).sum(dim=1) / (sim_fg.sum(dim=1) + eps)
-            sim_bg_mean = (sim_bg * sim_target_flat).sum(dim=1) / (sim_bg.sum(dim=1) + eps)
-            loss_sim = torch.mean(sim_bg_mean - sim_fg_mean)
+        loss_norm = torch.masked.masked_tensor(norm_bg_mean - norm_fg_mean, target.bool()).mean().get_data()
 
-            sim_max_class, _ = sim.max(dim=1)
-            sim_max_class_flat = sim_max_class.view(B, -1)
-
-            norm_fg = (sim_max_class_flat > 0).float()
-            norm_bg = (sim_max_class_flat < 0).float()
-
-            norm_fg_mean = (norm_fg * feature_norm_minmax_flat).sum(dim=1) / (norm_fg.sum(dim=1) + eps)
-            norm_bg_mean = (norm_bg * feature_norm_minmax_flat).sum(dim=1) / (norm_bg.sum(dim=1) + eps)
-
-            loss_norm = torch.mean(norm_bg_mean - norm_fg_mean)
-        else:
-            raise ValueError("dataset_name should be in ['ILSVRC', 'CUB']")
 
         return loss_sim, loss_norm
 
@@ -214,38 +202,16 @@ class Trainer(object):
 
 
     def save_checkpoint(self, epoch):
-        self._torch_save_model(
-            f'{epoch}_checkpoint.pth.tar')
+        self._torch_save_model(f'{epoch}_checkpoint.pth.tar')
         
 
     def load_checkpoint(self, checkpoint_name):
-        checkpoint_path = os.path.join(
-            self.log_dir,
-            checkpoint_name)
+        checkpoint_path = os.path.join(self.log_dir, checkpoint_name)
+
         if os.path.isfile(checkpoint_path):
             checkpoint = torch.load(checkpoint_path)
             self.model.load_state_dict(checkpoint['state_dict'], strict=True)
             print("Check {} loaded.".format(checkpoint_path))
-
-
-    def _compute_accuracy(self, loader, topk=(1,)):
-        num_correct = np.zeros((len(topk)))
-        num_images = 0
-
-        for i, (images, targets) in enumerate(loader):
-            images = images.cuda()
-            targets = targets.cuda()
-            output_dict = self.model_multi(images)
-            pred_topk = torch.argsort(output_dict['logits'], dim=1, descending=True)[:, :max(topk)]
-
-            for i_k, k in enumerate(topk):
-                co = (pred_topk[:, :k] == targets.unsqueeze(-1)).float()
-                num_correct[i_k] += torch.sum(torch.max(co, dim=1)[0]).item()
-            num_images += images.size(0)
-
-        classification_acc = num_correct / float(num_images) * 100
-
-        return classification_acc
 
 
     def train(self, warm=False):
