@@ -238,7 +238,7 @@ class Trainer(object):
             loss.backward()
             self.optimizer.step()
 
-        acc = self.accuracy.compute()
+        acc = self.accuracy.compute().item()
         self.accuracy.reset()
         loss_average = total_loss / float(num_images)
 
@@ -257,7 +257,7 @@ class Trainer(object):
 
             self.accuracy.update(probs, target)
 
-        acc = self.accuracy.compute()
+        acc = self.accuracy.compute().item()
         self.accuracy.reset()
         return dict(classification_val=acc)
     
