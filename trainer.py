@@ -185,7 +185,7 @@ class Trainer(object):
             if not warm:
                 loss += self.loss_ratio_sim * loss_sim + self.loss_ratio_norm * loss_norm
         elif self.wsol_method == 'cam':
-            loss = self.bce_with_logits_loss(logits, target)
+            loss = self.bce_with_logits_loss(logits, target.float())
         else:
             raise ValueError("wsol_method should be in ['bridging-gap', 'cam']")
 
@@ -228,7 +228,7 @@ class Trainer(object):
             target = target.cuda()
 
             logits, loss = self._wsol_training(images, target, warm=warm)
-            probs = self.model_multi.sigmoid(logits)
+            probs = self.model_multi.module.sigmoid(logits)
             self.accuracy.update(probs, target)
 
             num_images += images.size(0)
