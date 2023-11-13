@@ -82,6 +82,7 @@ class ResNetCam(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.sigmoid = nn.Sigmoid()
 
         initialize_weights(self.modules(), init_mode='xavier')
 
@@ -99,14 +100,22 @@ class ResNetCam(nn.Module):
         pre_logit = self.avgpool(x)
         pre_logit = pre_logit.reshape(pre_logit.size(0), -1)
         logits = self.fc(pre_logit)
+        
+        if self.training:
+            return {'logits': logits}
+        
+        if self.training == False:
+            probs = self.sigmoid(logits)
 
-        if return_cam:
-            feature_map = x.detach().clone()
-            cam_weights = self.fc.weight[labels]
-            cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
-                    feature_map).mean(1, keepdim=False)
-            return {'logits': logits, 'cams': cams}
-        return {'logits': logits}
+            if return_cam:
+                feature_map = x.detach().clone()
+                cam_weights = self.fc.weight[labels]
+                cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
+                        feature_map).mean(1, keepdim=False)
+                return {'probs': probs, 'cams': cams}
+            
+            return {'probs': probs}
+
 
     def _make_layer(self, block, planes, blocks, stride, use_latter=False):
         if use_latter:
@@ -177,14 +186,26 @@ class ResNetDrop(ResNetCam):
         weight_normalized = F.normalize(self.fc.weight, dim=1)
         sim = F.conv2d(input=x_normalized, weight=weight_normalized.view(*weight_normalized.shape, 1, 1))
 
-        if return_cam:
-            feature_map = unerased_x.detach().clone()
-            cam_weights = self.fc.weight[labels]
-            cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
-                    feature_map).mean(1, keepdim=False)
-            return {'logits': logits, 'cams': cams,
-                    'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
-        return {'logits': logits, 'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
+        # Evaluation
+        if self.training == False:
+            probs = self.sigmoid(logits)
+
+            if return_cam:
+                feature_map = unerased_x.detach().clone()
+                cam_weights = self.fc.weight[labels]
+                cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
+                        feature_map).mean(1, keepdim=False)
+                            
+                return {'probs': probs, 'cams': cams,
+                        'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
+            
+            return {'probs': probs, 'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
+
+        
+        if self.training:
+            return {'logits': logits, 'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
+
+
 
 def get_downsampling_layer(inplanes, block, planes, stride):
     outplanes = planes * block.expansion

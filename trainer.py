@@ -5,6 +5,7 @@ import os
 import torch
 import torch.nn as nn
 import numpy as np
+from torcheval import metrics
 
 
 class Trainer(object):
@@ -50,7 +51,8 @@ class Trainer(object):
 
         self.model = self._set_model()
         self.model_multi = torch.nn.DataParallel(self.model)
-        self.cross_entropy_loss = nn.CrossEntropyLoss().cuda()
+        self.bce_with_logits_loss = nn.BCEWithLogitsLoss().cuda()
+        self.accuracy = metrics.MultiLabelAccuracy().cuda()
         self.l1_loss = nn.L1Loss().cuda()
         self.optimizer = self._set_optimizer()
 
@@ -173,7 +175,7 @@ class Trainer(object):
         logits = output_dict['logits']
 
         if self.wsol_method == 'bridging-gap':
-            loss_ce = self.cross_entropy_loss(logits, target)
+            loss_ce = self.bce_with_logits_loss(logits, target)
 
             loss_drop = self.l1_loss(output_dict['feature'], output_dict['feature_erased'])
             loss_sim, loss_norm = \
@@ -183,7 +185,7 @@ class Trainer(object):
             if not warm:
                 loss += self.loss_ratio_sim * loss_sim + self.loss_ratio_norm * loss_norm
         elif self.wsol_method == 'cam':
-            loss = self.cross_entropy_loss(logits, target)
+            loss = self.bce_with_logits_loss(logits, target)
         else:
             raise ValueError("wsol_method should be in ['bridging-gap', 'cam']")
 
@@ -216,10 +218,9 @@ class Trainer(object):
 
     def train(self, warm=False):
         self.model_multi.train()
-        loader = self.loader
+        loader = self.loader['train']
 
         total_loss = 0.0
-        num_correct = 0
         num_images = 0
 
         for batch_idx, (images, target) in enumerate(tqdm(loader)):
@@ -227,8 +228,9 @@ class Trainer(object):
             target = target.cuda()
 
             logits, loss = self._wsol_training(images, target, warm=warm)
-            pred = logits.argmax(dim=1)
-            num_correct += (pred == target).sum().item()
+            probs = self.model_multi.sigmoid(logits)
+            self.accuracy.update(probs, target)
+
             num_images += images.size(0)
 
             total_loss += loss.item()
@@ -236,7 +238,31 @@ class Trainer(object):
             loss.backward()
             self.optimizer.step()
 
+        acc = self.accuracy.compute()
+        self.accuracy.reset()
         loss_average = total_loss / float(num_images)
-        classification_acc = num_correct / float(num_images) * 100
 
-        return dict(classification_acc=classification_acc, loss=loss_average)
+        return dict(classification=acc, loss=loss_average)
+    
+    def evaluate(self):
+        self.model_multi.eval()
+        loader = self.loader['val']
+
+        for batch_idx, (images, target) in enumerate(tqdm(loader)):
+            images = images.cuda()
+            target = target.cuda()
+
+            output_dict = self.model_multi(images)
+            probs = output_dict['probs']
+
+            self.accuracy.update(probs, target)
+
+        acc = self.accuracy.compute()
+        self.accuracy.reset()
+        return dict(classification_val=acc)
+    
+
+
+
+
+
