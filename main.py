@@ -90,12 +90,18 @@ def main():
         print(f'Epoch: {epoch + 1} {"(warm)" if warm else ""}')
 
         result = trainer.train(warm=warm)
-        print(result)
+        maxlen = max([len(key) for key in result.keys()])
+        print("\tMetrics:")
+        for k, v in result.items():
+            print(f"\t{k.ljust(maxlen+1)}: {v:0.2f}")
 
         if (epoch + 1) % 2 == 0:
             result = trainer.evaluate()
             print(f'Evaluate at epoch{epoch + 1}')
-            print(result)
+            maxlen = max([len(key) for key in result.keys()])
+            print("\tMetrics:")
+            for k, v in result.items():
+                print(f"\t{k.ljust(maxlen+1)}: {v:0.2f}")
 
         print("---------------------------------\n")
 
