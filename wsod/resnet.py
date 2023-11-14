@@ -104,7 +104,6 @@ class ResNetCam(nn.Module):
         if self.training:
             return {'logits': logits}
         
-        # training == False
         probs = self.sigmoid(logits)
 
         if return_cam:
@@ -193,30 +192,27 @@ class ResNetDrop(ResNetCam):
         weight_normalized = F.normalize(self.fc.weight, dim=1)
         sim = F.conv2d(input=x_normalized, weight=weight_normalized.view(*weight_normalized.shape, 1, 1))
 
-        # Evaluation
-        if self.training == False:
-            probs = self.sigmoid(logits)
-
-            if return_cam:
-                cams = []
-                feature_map = unerased_x.detach().clone()
-
-                for label, feature in zip(labels, feature_map):
-                    cam_per_image = dict()
-                    for nonzeros in label.nonzero():
-                        i = nonzeros.item()
-                        cam_weights = self.fc.weight[i]
-                        cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
-
-                    cams.append(cam_per_image)
-                return {'probs': probs, 'cams': cams}
-
-        
         if self.training:
             return {'logits': logits, 'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
 
+        probs = self.sigmoid(logits)
 
+        if return_cam:
+            cams = []
+            feature_map = unerased_x.detach().clone()
 
+            for label, feature in zip(labels, feature_map):
+                cam_per_image = dict()
+                for nonzeros in label.nonzero():
+                    i = nonzeros.item()
+                    cam_weights = self.fc.weight[i]
+                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+
+                cams.append(cam_per_image)
+            return {'probs': probs, 'cams': cams}
+        
+        return {'probs': probs}
+        
 def get_downsampling_layer(inplanes, block, planes, stride):
     outplanes = planes * block.expansion
     if stride == 1 and inplanes == outplanes:
