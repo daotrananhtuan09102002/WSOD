@@ -245,11 +245,14 @@ class Trainer(object):
             loss.backward()
             self.optimizer.step()
 
-        acc = self.metrics.compute().item()
+        result = self.metrics.compute().item()
         self.metrics.reset()
         loss_average = total_loss / float(num_images)
 
-        return dict(classification=acc, loss=loss_average)
+        if self.type_metric == 'mAP':
+            return dict(mAP=result, loss=loss_average)
+
+        return dict(accuracy=result, loss=loss_average)
     
     def evaluate(self):
         self.model_multi.eval()
@@ -264,9 +267,13 @@ class Trainer(object):
 
             self.metrics.update(probs, target)
 
-        acc = self.metrics.compute().item()
+        result = self.metrics.compute().item()
         self.metrics.reset()
-        return dict(classification_val=acc)
+
+        if self.type_metric == 'mAP':
+            return dict(mAP_val=result)
+        
+        return dict(accuracy_val=result)
     
 
 
