@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torcheval import metrics
+from APLloss import APLLoss
 
 
 class Trainer(object):
@@ -26,7 +27,7 @@ class Trainer(object):
     def __init__(self, dataset_name, architecture, architecture_type, pretrained,
                  large_feature_map, drop_threshold, drop_prob, lr, lr_classifier_ratio,
                  momentum, weight_decay, lr_decay_points, lr_decay_rate,
-                 sim_fg_thres, sim_bg_thres, loss_ratio_drop,
+                 sim_fg_thres, sim_bg_thres, loss_ratio_drop, type_loss,
                  loss_ratio_sim, loss_ratio_norm, wsol_method, loader, log_dir):
         self.dataset_name = dataset_name
         self.architecture = architecture
@@ -51,7 +52,12 @@ class Trainer(object):
 
         self.model = self._set_model()
         self.model_multi = torch.nn.DataParallel(self.model)
-        self.bce_with_logits_loss = nn.BCEWithLogitsLoss().cuda()
+
+        if type_loss == 'APL':
+            self.criterion = APLLoss(gamma_neg=4, gamma_pos=0, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True).cuda()
+        elif type_loss == 'BCE':
+            self.criterion = nn.BCEWithLogitsLoss().cuda()
+
         self.accuracy = metrics.MultilabelAccuracy().to('cuda')
         self.l1_loss = nn.L1Loss().cuda()
         self.optimizer = self._set_optimizer()
@@ -173,19 +179,19 @@ class Trainer(object):
     def _wsol_training(self, images, target, warm=False):
         output_dict = self.model_multi(images, labels=target)
         logits = output_dict['logits']
-
+        
+        loss_classify = self.criterion(logits, target)
         if self.wsol_method == 'bridging-gap':
-            loss_ce = self.bce_with_logits_loss(logits, target)
-
             loss_drop = self.l1_loss(output_dict['feature'], output_dict['feature_erased'])
             loss_sim, loss_norm = \
                 self._get_loss_alignment(output_dict['feature'], output_dict['sim'], target)
 
-            loss = loss_ce + self.loss_ratio_drop * loss_drop
+            loss = loss_classify + self.loss_ratio_drop * loss_drop
             if not warm:
                 loss += self.loss_ratio_sim * loss_sim + self.loss_ratio_norm * loss_norm
+                
         elif self.wsol_method == 'cam':
-            loss = self.bce_with_logits_loss(logits, target.float())
+            loss = loss_classify
         else:
             raise ValueError("wsol_method should be in ['bridging-gap', 'cam']")
 

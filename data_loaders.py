@@ -44,7 +44,7 @@ class VOCDataset(Dataset):
         # Convert class indices to a one-hot matrix
         label_one_hot = F.one_hot(torch.tensor(class_indices), num_classes=self.num_classes).sum(dim=0)
 
-        return image, label_one_hot.int()
+        return image, label_one_hot.float()
 
 def get_data_loader(data_roots, batch_size,
                     resize_size):
