@@ -60,6 +60,9 @@ class Trainer(object):
             self.metrics = metrics.MultilabelAUPRC(num_labels=self._NUM_CLASSES_MAPPING[self.dataset_name]).to('cuda')
         elif type_metric == 'acc':
             self.metrics = metrics.MultilabelAccuracy().to('cuda')
+
+        self.type_metric = type_metric
+        self.type_loss = type_loss
         self.l1_loss = nn.L1Loss().cuda()
         self.optimizer = self._set_optimizer()
         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
