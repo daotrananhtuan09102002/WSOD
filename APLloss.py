@@ -12,8 +12,8 @@ class APLLoss(nn.Module):
         self.eps = eps
 
         # parameters of Taylor expansion polynomials
-        self.epsilon_pos = 1.0
-        self.epsilon_neg = 0.0
+        self.epsilon_pos = 0.0
+        self.epsilon_neg = 3.0
         self.epsilon_pos_pow = -2.5
 
     def forward(self, x, y):
