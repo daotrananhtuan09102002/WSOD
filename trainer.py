@@ -40,8 +40,6 @@ class Trainer(object):
         self.lr_classifier_ratio = lr_classifier_ratio
         self.momentum = momentum
         self.weight_decay = weight_decay
-        self.lr_decay_points = lr_decay_points
-        self.lr_decay_rate = lr_decay_rate
 
         self.sim_fg_thres = sim_fg_thres
         self.sim_bg_thres = sim_bg_thres
@@ -64,6 +62,12 @@ class Trainer(object):
             self.metrics = metrics.MultilabelAccuracy().to('cuda')
         self.l1_loss = nn.L1Loss().cuda()
         self.optimizer = self._set_optimizer()
+        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
+            self.optimizer,
+            milestones=lr_decay_points, 
+            gamma=lr_decay_rate,
+            verbose=True
+        )
 
         self.loader = loader
         self.log_dir = log_dir
@@ -165,7 +169,8 @@ class Trainer(object):
 
         sim_fg_mean = (sim_fg[:, None] * sim_flat).sum(dim=-1) / (sim_fg.sum(dim=-1) + eps)[:, None]
         sim_bg_mean = (sim_bg[:, None] * sim_flat).sum(dim=-1) / (sim_bg.sum(dim=-1) + eps)[:, None]
-        loss_sim = torch.masked.masked_tensor(sim_bg_mean - sim_fg_mean, target.bool()).mean().get_data()
+        loss_sim = (sim_bg_mean - sim_fg_mean).data.clone().detach()
+        loss_sim = torch.masked.masked_tensor(loss_sim, target.bool()).mean().get_data()
 
         # norm loss
         norm_fg = (sim_flat > 0).float()
@@ -173,8 +178,8 @@ class Trainer(object):
 
         norm_fg_mean = (norm_fg * feature_norm_minmax_flat[:, None]).sum(dim=-1) / (norm_fg.sum(dim=-1) + eps)
         norm_bg_mean = (norm_bg * feature_norm_minmax_flat[:, None]).sum(dim=-1) / (norm_bg.sum(dim=-1) + eps)
-
-        loss_norm = torch.masked.masked_tensor(norm_bg_mean - norm_fg_mean, target.bool()).mean().get_data()
+        loss_norm = (norm_bg_mean - norm_fg_mean).data.clone().detach()
+        loss_norm = torch.masked.masked_tensor(loss_norm, target.bool()).mean().get_data()
 
 
         return loss_sim, loss_norm
@@ -199,13 +204,6 @@ class Trainer(object):
             raise ValueError("wsol_method should be in ['bridging-gap', 'cam']")
 
         return logits, loss
-
-
-    def adjust_learning_rate(self, epoch):
-        if epoch != 0 and epoch in self.lr_decay_points:
-            for param_group in self.optimizer.param_groups:
-                param_group['lr'] *= self.lr_decay_rate
-
 
     def _torch_save_model(self, filename):
         torch.save({'state_dict': self.model.state_dict()},
