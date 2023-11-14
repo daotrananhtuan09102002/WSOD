@@ -28,7 +28,8 @@ class Trainer(object):
                  large_feature_map, drop_threshold, drop_prob, lr, lr_classifier_ratio,
                  momentum, weight_decay, lr_decay_points, lr_decay_rate,
                  sim_fg_thres, sim_bg_thres, loss_ratio_drop, type_loss, type_metric,
-                 loss_ratio_sim, loss_ratio_norm, wsol_method, loader, log_dir):
+                 loss_ratio_sim, loss_ratio_norm, wsol_method, loader, log_dir,
+                 gamma_neg=4, gamma_pos=0):
         self.dataset_name = dataset_name
         self.architecture = architecture
         self.architecture_type = architecture_type
@@ -52,12 +53,12 @@ class Trainer(object):
         self.model_multi = torch.nn.DataParallel(self.model)
 
         if type_loss == 'APL':
-            self.criterion = APLLoss(gamma_neg=4, gamma_pos=1, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True).cuda()
+            self.criterion = APLLoss(gamma_neg=gamma_neg, gamma_pos=gamma_pos, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True).cuda()
         elif type_loss == 'BCE':
             self.criterion = nn.BCEWithLogitsLoss().cuda()
 
         if type_metric == 'mAP':
-            self.metrics = metrics.MultilabelAUPRC(num_labels=self._NUM_CLASSES_MAPPING[self.dataset_name]).to('cuda')
+            self.metrics = metrics.MultilabelAUPRC(num_labels=self._NUM_CLASSES_MAPPING[self.dataset_name])
         elif type_metric == 'acc':
             self.metrics = metrics.MultilabelAccuracy().to('cuda')
 
