@@ -59,7 +59,7 @@ class Trainer(object):
             self.criterion = nn.BCEWithLogitsLoss().cuda()
 
         if type_metric == 'mAP':
-            self.metrics = metrics.MultilabelAUROC(num_labels=self._NUM_CLASSES_MAPPING[self.dataset_name]).to('cuda')
+            self.metrics = metrics.MulticlassAUPRC(num_labels=self._NUM_CLASSES_MAPPING[self.dataset_name]).to('cuda')
         elif type_metric == 'acc':
             self.metrics = metrics.MultilabelAccuracy().to('cuda')
         self.l1_loss = nn.L1Loss().cuda()
