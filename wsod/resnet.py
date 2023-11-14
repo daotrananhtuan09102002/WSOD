@@ -104,17 +104,24 @@ class ResNetCam(nn.Module):
         if self.training:
             return {'logits': logits}
         
-        if self.training == False:
-            probs = self.sigmoid(logits)
+        # training == False
+        probs = self.sigmoid(logits)
 
-            if return_cam:
-                feature_map = x.detach().clone()
-                cam_weights = self.fc.weight[labels]
-                cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
-                        feature_map).mean(1, keepdim=False)
-                return {'probs': probs, 'cams': cams}
-            
-            return {'probs': probs}
+        if return_cam:
+            cams = []
+            feature_map = x.detach().clone()
+
+            for label, feature in zip(labels, feature_map):
+                cam_per_image = dict()
+                for nonzeros in label.nonzero():
+                    i = nonzeros.item()
+                    cam_weights = self.fc.weight[i]
+                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+
+                cams.append(cam_per_image)
+            return {'probs': probs, 'cams': cams}
+        
+        return {'probs': probs}
 
 
     def _make_layer(self, block, planes, blocks, stride, use_latter=False):
@@ -191,15 +198,18 @@ class ResNetDrop(ResNetCam):
             probs = self.sigmoid(logits)
 
             if return_cam:
+                cams = []
                 feature_map = unerased_x.detach().clone()
-                cam_weights = self.fc.weight[labels]
-                cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
-                        feature_map).mean(1, keepdim=False)
-                            
-                return {'probs': probs, 'cams': cams,
-                        'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
-            
-            return {'probs': probs, 'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
+
+                for label, feature in zip(labels, feature_map):
+                    cam_per_image = dict()
+                    for nonzeros in label.nonzero():
+                        i = nonzeros.item()
+                        cam_weights = self.fc.weight[i]
+                        cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+
+                    cams.append(cam_per_image)
+                return {'probs': probs, 'cams': cams}
 
         
         if self.training:
