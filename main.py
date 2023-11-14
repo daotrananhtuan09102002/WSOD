@@ -46,6 +46,8 @@ def main():
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--type_metric', type=str, default='acc', help='Type metric')
     parser.add_argument('--type_loss', type=str, default='BCE', help='Type loss')
+    parser.add_argument('--gamma_neg', type=int, default=4, help='Gamma negative for APL loss')
+    parser.add_argument('--gamma_pos', type=int, default=0, help='Gamma positive for APL loss')
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
@@ -80,7 +82,7 @@ def main():
         type_loss=args.type_loss
     )
     
-    
+
     for epoch in range(40):
         # Check warm epoch
         warm = True if epoch < 10 else False
