@@ -4,6 +4,7 @@ import random
 from data_loaders import get_data_loader
 from trainer import Trainer
 from trainer import Trainer
+import argparse
 
 def set_random_seed(seed):
     if seed is None:
@@ -15,33 +16,71 @@ def set_random_seed(seed):
 
 
 def main():
+    parser = argparse.ArgumentParser(description='Your script description here.')
+
+    # Data loader arguments
+    parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
+
+    # Trainer arguments
+    parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
+    parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
+    parser.add_argument('--architecture_type', type=str, default='cam', help='Model architecture type')
+    parser.add_argument('--pretrained', type=bool, default=True, help='Use pre-trained weights')
+    parser.add_argument('--large_feature_map', type=bool, default=True, help='Use large feature map')
+    parser.add_argument('--drop_threshold', type=float, default=0.8, help='Drop threshold')
+    parser.add_argument('--drop_prob', type=float, default=0.25, help='Drop probability')
+    parser.add_argument('--lr', type=float, default=0.002, help='Learning rate')
+    parser.add_argument('--lr_classifier_ratio', type=float, default=10.0, help='Learning rate classifier ratio')
+    parser.add_argument('--momentum', type=float, default=0.9, help='Momentum')
+    parser.add_argument('--weight_decay', type=float, default=0.0001, help='Weight decay')
+    parser.add_argument('--lr_decay_points', nargs='+', type=int, default=[21, 31], help='LR decay points')
+    parser.add_argument('--lr_decay_rate', type=float, default=0.2, help='LR decay rate')
+    parser.add_argument('--sim_fg_thres', type=float, default=0.4, help='Similarity foreground threshold')
+    parser.add_argument('--sim_bg_thres', type=float, default=0.2, help='Similarity background threshold')
+    parser.add_argument('--loss_ratio_drop', type=float, default=2.0, help='Loss ratio drop')
+    parser.add_argument('--loss_ratio_sim', type=float, default=0.5, help='Loss ratio similarity')
+    parser.add_argument('--loss_ratio_norm', type=float, default=0.05, help='Loss ratio normalization')
+    parser.add_argument('--wsol_method', type=str, default='cam', help='WSOL method')
+    parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
+    parser.add_argument('--type_metric', type=str, default='acc', help='Type metric')
+    parser.add_argument('--type_loss', type=str, default='BCE', help='Type loss')
+    # Add more Trainer arguments as needed
+
+    args = parser.parse_args()
+
+    # Use arguments in your Trainer initialization
     set_random_seed(42)
-    voc_dataloader = get_data_loader(data_roots='./voc', batch_size = 5, resize_size = 224)
+    voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, resize_size=args.resize_size)
 
     trainer = Trainer(
-        dataset_name = 'VOC', 
-        architecture = 'resnet50', 
-        architecture_type = 'cam', 
-        pretrained = True,   
-        large_feature_map = True, 
-        drop_threshold = 0.8, 
-        drop_prob = 0.25, 
-        lr = 0.002, 
-        lr_classifier_ratio = 10.0,
-        momentum = 0.9, 
-        weight_decay = 0.0001, 
-        lr_decay_points = [21, 31], 
-        lr_decay_rate = 0.2,
-        sim_fg_thres = 0.4, 
-        sim_bg_thres = 0.2, 
-        loss_ratio_drop = 2.0,
-        loss_ratio_sim = 0.5, 
-        loss_ratio_norm = 0.05, 
-        wsol_method = 'cam', 
-        loader = voc_dataloader, 
-        log_dir = './result'
+        dataset_name=args.dataset_name,
+        architecture=args.architecture,
+        architecture_type=args.architecture_type,
+        pretrained=args.pretrained,
+        large_feature_map=args.large_feature_map,
+        drop_threshold=args.drop_threshold,
+        drop_prob=args.drop_prob,
+        lr=args.lr,
+        lr_classifier_ratio=args.lr_classifier_ratio,
+        momentum=args.momentum,
+        weight_decay=args.weight_decay,
+        lr_decay_points=args.lr_decay_points,
+        lr_decay_rate=args.lr_decay_rate,
+        sim_fg_thres=args.sim_fg_thres,
+        sim_bg_thres=args.sim_bg_thres,
+        loss_ratio_drop=args.loss_ratio_drop,
+        loss_ratio_sim=args.loss_ratio_sim,
+        loss_ratio_norm=args.loss_ratio_norm,
+        wsol_method=args.wsol_method,
+        loader=voc_dataloader,
+        log_dir=args.log_dir,
+        type_metric=args.type_metric,
+        type_loss=args.type_loss
     )
-
+    
+    
     for epoch in range(40):
         # Check warm epoch
         warm = True if epoch < 10 else False
