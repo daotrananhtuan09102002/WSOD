@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 
 class APLLoss(nn.Module):
-    def __init__(self, gamma_neg=4, gamma_pos=0, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True):
+    def __init__(self, gamma_neg=4, gamma_pos=0, clip=0.05, eps=1e-8, 
+                 disable_torch_grad_focal_loss=True, Taylor_expansion=True):
         super(APLLoss, self).__init__()
 
         self.gamma_neg = gamma_neg
@@ -10,6 +11,7 @@ class APLLoss(nn.Module):
         self.clip = clip
         self.disable_torch_grad_focal_loss = disable_torch_grad_focal_loss
         self.eps = eps
+        self.Taylor_expansion = Taylor_expansion
 
         # parameters of Taylor expansion polynomials
         self.epsilon_pos = 0.0
@@ -30,10 +32,16 @@ class APLLoss(nn.Module):
         if self.clip is not None and self.clip > 0:
             xs_neg = (xs_neg + self.clip).clamp(max=1)
 
-        # Basic CE calculation
-        los_pos = y * torch.log(xs_pos.clamp(min=self.eps))
-        los_neg = (1 - y) * torch.log(xs_neg.clamp(min=self.eps))
-        loss = los_pos + los_neg
+        if self.Taylor_expansion:
+            # Basic Taylor expansion polynomials
+            los_pos = y * (torch.log(xs_pos.clamp(min=self.eps)) + self.epsilon_pos * (1 - xs_pos.clamp(min=self.eps)) + self.epsilon_pos_pow * 0.5 * torch.pow(1 - xs_pos.clamp(min=self.eps), 2) )
+            los_neg = (1 - y) * (torch.log(xs_neg.clamp(min=self.eps)) + self.epsilon_neg * (xs_neg.clamp(min=self.eps)) )
+            loss = los_pos + los_neg
+        else:
+            # Basic CE calculation
+            los_pos = y * torch.log(xs_pos.clamp(min=self.eps))
+            los_neg = (1 - y) * torch.log(xs_neg.clamp(min=self.eps))
+            loss = los_pos + los_neg
 
         # Asymmetric Focusing
         if self.gamma_neg > 0 or self.gamma_pos > 0:

@@ -34,7 +34,9 @@ class Trainer(object):
 
         if args.type_loss == 'APL':
             self.criterion = APLLoss(gamma_neg=args.gamma_neg, gamma_pos=args.gamma_pos, 
-                                     clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True).cuda()
+                                     clip=0.05, eps=1e-8, 
+                                     disable_torch_grad_focal_loss=True, 
+                                     Taylor_expansion=args.Taylor_expansion).cuda()
         elif args.type_loss == 'BCE':
             self.criterion = nn.BCEWithLogitsLoss().cuda()
 

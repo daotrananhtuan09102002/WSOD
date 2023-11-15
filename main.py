@@ -51,6 +51,7 @@ def main():
     parser.add_argument('--gamma_pos', type=int, default=0, help='Gamma positive for APL loss')
     parser.add_argument('--type_optimizer', type=str, default='SGD', help='Type optimizer')
     parser.add_argument('--num_epoch', type=int, default=40, help="Number of epoch")
+    parser.add_argument('--Taylor_expansion', type=bool, default=True, help="Taylor expansion")
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
@@ -81,7 +82,7 @@ def main():
         for k, v in result.items():
             print(f"\t{k.ljust(maxlen+1)}: {v:0.2f}")
 
-        if (epoch + 1) % 2 == 0:
+        if (epoch + 1) % 5 == 0:
             result = trainer.evaluate()
             print(f'Evaluate at epoch {epoch + 1}')
             maxlen = max([len(key) for key in result.keys()])
