@@ -1,10 +1,12 @@
 import numpy as np
 import torch
 import random
-from data_loaders import get_data_loader
-from trainer import Trainer
-from trainer import Trainer
 import argparse
+
+from data_loaders import get_data_loader
+
+from trainer import Trainer
+from trainer import Trainer
 
 def set_random_seed(seed):
     if seed is None:
@@ -13,6 +15,13 @@ def set_random_seed(seed):
     random.seed(seed)
     torch.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
+
+def print_metrics(metrics):
+    maxlen = max([len(key) for key in metrics.keys()])
+    print("\tMetrics:")
+    print("\t" + "-" * (maxlen + 1))
+    for k, v in metrics.items():
+        print(f"\t{k.ljust(maxlen+1)}: {v:0.2f}")
 
 
 def main():
@@ -80,25 +89,19 @@ def main():
         print(f'Epoch: {epoch + 1} {"(warm)" if warm else ""}')
 
         result = trainer.train(warm=warm)
-        maxlen = max([len(key) for key in result.keys()])
-        print("\tMetrics:")
-        for k, v in result.items():
-            print(f"\t{k.ljust(maxlen+1)}: {v:0.2f}")
+        print_metrics(result)
 
         if (epoch + 1) % args.eval_every == 0:
             result = trainer.evaluate()
-            print(f'Evaluate at epoch {epoch + 1}')
-            maxlen = max([len(key) for key in result.keys()])
-            print("\tMetrics:")
-            for k, v in result.items():
-                print(f"\t{k.ljust(maxlen+1)}: {v:0.2f}")
+            print(f'Evaluate at epoch{epoch + 1}')
+            print_metrics(result)
 
-        print("---------------------------------\n")
 
         if (epoch + 1) % 5 == 0:
             trainer.save_checkpoint(epoch + 1)
         
         trainer.scheduler.step()
 
+        print("---------------------------------\n")
 if __name__ == '__main__':
     main()

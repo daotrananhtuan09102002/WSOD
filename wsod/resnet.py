@@ -8,12 +8,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.model_zoo import load_url
 
-from .method import AttentiveDrop
+from .method.drop import AttentiveDrop
 from .util import remove_layer
 from .util import replace_layer
 from .util import initialize_weights
-
-__all__ = ['resnet50']
 
 model_urls = {
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
