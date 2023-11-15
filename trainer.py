@@ -171,7 +171,7 @@ class Trainer(object):
         sim_fg_mean = (sim_fg[:, None] * sim_flat).sum(dim=-1) / (sim_fg.sum(dim=-1) + eps)[:, None]
         sim_bg_mean = (sim_bg[:, None] * sim_flat).sum(dim=-1) / (sim_bg.sum(dim=-1) + eps)[:, None]
         loss_sim = (sim_bg_mean - sim_fg_mean).data.clone().detach()
-        loss_sim = torch.masked.masked_tensor(loss_sim, target.bool()).mean().get_data()
+        loss_sim = torch.masked.masked_tensor(loss_sim, target.bool()).prod(dim=1).mean().get_data()
 
         # norm loss
         norm_fg = (sim_flat > 0).float()
@@ -180,7 +180,7 @@ class Trainer(object):
         norm_fg_mean = (norm_fg * feature_norm_minmax_flat[:, None]).sum(dim=-1) / (norm_fg.sum(dim=-1) + eps)
         norm_bg_mean = (norm_bg * feature_norm_minmax_flat[:, None]).sum(dim=-1) / (norm_bg.sum(dim=-1) + eps)
         loss_norm = (norm_bg_mean - norm_fg_mean).data.clone().detach()
-        loss_norm = torch.masked.masked_tensor(loss_norm, target.bool()).mean().get_data()
+        loss_norm = torch.masked.masked_tensor(loss_norm, target.bool()).prod(dim=1).mean().get_data()
 
 
         return loss_sim, loss_norm
