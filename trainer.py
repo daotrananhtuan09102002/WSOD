@@ -58,7 +58,7 @@ class Trainer(object):
 
 
     def _set_model(self):
-        num_classes = self._NUM_CLASSES_MAPPING[self.dataset_name]
+        num_classes = self._NUM_CLASSES_MAPPING[self.args.dataset_name]
         print("Loading model {}".format(self.args.architecture))
         arch = self.args.architecture
         model = wsod.__dict__[arch](
