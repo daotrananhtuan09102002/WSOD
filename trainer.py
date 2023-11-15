@@ -255,9 +255,9 @@ class Trainer(object):
 
         return dict(accuracy=result, loss=loss_average)
     
-    def evaluate(self):
+    def evaluate(self, split='val'):
         self.model_multi.eval()
-        loader = self.loader['val']
+        loader = self.loader[split]
 
         for batch_idx, (images, target) in enumerate(tqdm(loader)):
             images = images.cuda()
