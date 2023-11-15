@@ -3,11 +3,11 @@ import os
 import torchvision
 import torch
 import torch.nn.functional as F
+import torchvision.transforms.v2 as transforms
 
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-from torchvision import transforms
 
 
 _IMAGE_MEAN_VALUE = [0.485, 0.456, 0.406]
@@ -21,8 +21,13 @@ VOC_CLASSES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
 
 class VOCDataset(Dataset):
     def __init__(self, root, year, image_set, transform=None, num_classes=20):
-        self.voc_data = torchvision.datasets.VOCDetection(root=root, year=year,
-                                                          image_set=image_set, download=True)
+        self.voc_data = torchvision.datasets.wrap_dataset_for_transforms_v2(
+            torchvision.datasets.VOCDetection(
+                root=root, 
+                year=year,
+                image_set=image_set, 
+                download=True
+        ))
         self.num_classes = num_classes
         self.transform = transform
         self.image_set = image_set
@@ -31,33 +36,42 @@ class VOCDataset(Dataset):
         return len(self.voc_data)
 
     def __getitem__(self, index):
-        image, target = self.voc_data[index]
+        sample = self.voc_data[index]
 
-        image = self.transform(image)
+        image, target = self.transform(sample)
 
-        # Extract labels from the target
-        labels = target['annotation']['object']
+        # Convert class indices to a multi-hot matrix
+        label_multi_hot = F.one_hot(
+            torch.unique(target['labels']) - 1, 
+            num_classes=self.num_classes
+        ).sum(dim=0)
 
-        # Convert labels to a list of class indices, unique label
-        class_indices = list(set(VOC_CLASSES.index(obj['name']) for obj in labels))
-
-        # Convert class indices to a one-hot matrix
-        label_one_hot = F.one_hot(torch.tensor(class_indices), num_classes=self.num_classes).sum(dim=0)
-
-        return image, label_one_hot.float()
+        if self.image_set == 'train':
+            return image, label_multi_hot.float()
+        else:
+            bounding_boxes = torch.cat(
+                (target['labels'][:, None] - 1 , target['boxes']), 
+                dim=1
+            )
+            return image, { 
+                'labels': label_multi_hot.float(),
+                'bounding_boxes': bounding_boxes
+            }
 
 def get_data_loader(data_roots, batch_size, resize_size):
     dataset_transforms = dict(
         train=transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
             transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
         ]),
-        val=transforms.Compose([
+        val=torchvision.transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
+            transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
+            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
         ]))
 
     loader_dict = {

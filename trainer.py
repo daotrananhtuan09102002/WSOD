@@ -1,12 +1,13 @@
-from tqdm import tqdm
 import wsod
 import wsod.method
 import os
 import torch
 import torch.nn as nn
+
 import numpy as np
 import argparse
 from torcheval import metrics
+from tqdm import tqdm
 from APLloss import APLLoss
 
 
