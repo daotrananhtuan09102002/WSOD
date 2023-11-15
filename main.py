@@ -64,6 +64,9 @@ def main():
         loader=voc_dataloader,
     )
     
+    print("Using optimizer:", args.type_optimizer)
+    print("Using loss:", args.type_loss)
+    print("Start training...")
 
     for epoch in range(40):
         # Check warm epoch
@@ -79,7 +82,7 @@ def main():
 
         if (epoch + 1) % 2 == 0:
             result = trainer.evaluate()
-            print(f'Evaluate at epoch{epoch + 1}')
+            print(f'Evaluate at epoch {epoch + 1}')
             maxlen = max([len(key) for key in result.keys()])
             print("\tMetrics:")
             for k, v in result.items():
