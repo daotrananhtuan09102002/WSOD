@@ -16,14 +16,13 @@ def set_random_seed(seed):
 
 
 def main():
-    parser1 = argparse.ArgumentParser(description='Your script description here.')
+    parser = argparse.ArgumentParser(description='Your script description here.')
 
     # Data loader arguments
-    parser1.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
-    parser1.add_argument('--batch_size', type=int, default=16, help='Batch size')
-    parser1.add_argument('--resize_size', type=int, default=224, help='Resize size')
+    parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
 
-    parser = argparse.ArgumentParser(description='Your script description here.')
 
     # Trainer arguments
     parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
@@ -53,11 +52,11 @@ def main():
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
-    args1 = parser1.parse_args()
 
     # Use arguments in your Trainer initialization
     set_random_seed(42)
-    voc_dataloader = get_data_loader(data_roots=args1.data_roots, batch_size=args1.batch_size, resize_size=args1.resize_size)
+    voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, 
+                                     resize_size=args.resize_size)
 
     trainer = Trainer(
         args=args,
