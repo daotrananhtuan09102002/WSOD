@@ -16,12 +16,14 @@ def set_random_seed(seed):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Your script description here.')
+    parser1 = argparse.ArgumentParser(description='Your script description here.')
 
     # Data loader arguments
-    parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
-    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
-    parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
+    parser1.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
+    parser1.add_argument('--batch_size', type=int, default=16, help='Batch size')
+    parser1.add_argument('--resize_size', type=int, default=224, help='Resize size')
+
+    parser = argparse.ArgumentParser(description='Your script description here.')
 
     # Trainer arguments
     parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
@@ -51,35 +53,15 @@ def main():
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
+    args1 = parser1.parse_args()
 
     # Use arguments in your Trainer initialization
     set_random_seed(42)
-    voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, resize_size=args.resize_size)
+    voc_dataloader = get_data_loader(data_roots=args1.data_roots, batch_size=args1.batch_size, resize_size=args1.resize_size)
 
     trainer = Trainer(
-        dataset_name=args.dataset_name,
-        architecture=args.architecture,
-        architecture_type=args.architecture_type,
-        pretrained=args.pretrained,
-        large_feature_map=args.large_feature_map,
-        drop_threshold=args.drop_threshold,
-        drop_prob=args.drop_prob,
-        lr=args.lr,
-        lr_classifier_ratio=args.lr_classifier_ratio,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay,
-        lr_decay_points=args.lr_decay_points,
-        lr_decay_rate=args.lr_decay_rate,
-        sim_fg_thres=args.sim_fg_thres,
-        sim_bg_thres=args.sim_bg_thres,
-        loss_ratio_drop=args.loss_ratio_drop,
-        loss_ratio_sim=args.loss_ratio_sim,
-        loss_ratio_norm=args.loss_ratio_norm,
-        wsol_method=args.wsol_method,
+        args=args,
         loader=voc_dataloader,
-        log_dir=args.log_dir,
-        type_metric=args.type_metric,
-        type_loss=args.type_loss
     )
     
 
