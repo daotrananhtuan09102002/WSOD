@@ -90,7 +90,7 @@ class ConfusionMatrix:
             if not any(m1 == i):
                 self.matrix[dc, self.nc] += 1  # predicted background
 
-    def tp_fp(self):
+    def tp_fp_fn(self):
         tp = self.matrix.diagonal()  # true positives
         fp = self.matrix.sum(1) - tp  # false positives
         fn = self.matrix.sum(0) - tp  # false negatives (missed detections)
