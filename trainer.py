@@ -265,12 +265,11 @@ class Trainer(object):
 
         for batch_idx, (images, target) in enumerate(tqdm(loader)):
             images = images.cuda()
-            target = target.cuda()
 
             output_dict = self.model_multi(images)
             probs = output_dict['probs']
 
-            self.metrics.update(probs, target)
+            self.metrics.update(probs, target['labels'])
 
         result = self.metrics.compute().item()
         self.metrics.reset()
