@@ -124,7 +124,7 @@ class Trainer(object):
                 momentum=self.args.momentum,
                 weight_decay=self.args.weight_decay,
                 nesterov=True)
-        elif self.args.type_optimier == 'Adam':
+        elif self.args.type_optimizer == 'Adam':
             optimizer = torch.optim.Adam(
                 [
                     {
