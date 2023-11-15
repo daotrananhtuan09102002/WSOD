@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
 
+
     # Trainer arguments
     parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
@@ -54,32 +55,12 @@ def main():
 
     # Use arguments in your Trainer initialization
     set_random_seed(42)
-    voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, resize_size=args.resize_size)
+    voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, 
+                                     resize_size=args.resize_size)
 
     trainer = Trainer(
-        dataset_name=args.dataset_name,
-        architecture=args.architecture,
-        architecture_type=args.architecture_type,
-        pretrained=args.pretrained,
-        large_feature_map=args.large_feature_map,
-        drop_threshold=args.drop_threshold,
-        drop_prob=args.drop_prob,
-        lr=args.lr,
-        lr_classifier_ratio=args.lr_classifier_ratio,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay,
-        lr_decay_points=args.lr_decay_points,
-        lr_decay_rate=args.lr_decay_rate,
-        sim_fg_thres=args.sim_fg_thres,
-        sim_bg_thres=args.sim_bg_thres,
-        loss_ratio_drop=args.loss_ratio_drop,
-        loss_ratio_sim=args.loss_ratio_sim,
-        loss_ratio_norm=args.loss_ratio_norm,
-        wsol_method=args.wsol_method,
+        args=args,
         loader=voc_dataloader,
-        log_dir=args.log_dir,
-        type_metric=args.type_metric,
-        type_loss=args.type_loss
     )
     
 

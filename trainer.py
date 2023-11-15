@@ -5,8 +5,10 @@ import os
 import torch
 import torch.nn as nn
 import numpy as np
+import argparse
 from torcheval import metrics
 from APLloss import APLLoss
+
 
 
 class Trainer(object):
@@ -24,71 +26,49 @@ class Trainer(object):
         'resnet': ['fc.']
     }
 
-    def __init__(self, dataset_name, architecture, architecture_type, pretrained,
-                 large_feature_map, drop_threshold, drop_prob, lr, lr_classifier_ratio,
-                 momentum, weight_decay, lr_decay_points, lr_decay_rate,
-                 sim_fg_thres, sim_bg_thres, loss_ratio_drop, type_loss, type_metric,
-                 loss_ratio_sim, loss_ratio_norm, wsol_method, loader, log_dir,
-                 gamma_neg=4, gamma_pos=0):
-        self.dataset_name = dataset_name
-        self.architecture = architecture
-        self.architecture_type = architecture_type
-        self.pretrained = pretrained
-        self.large_feature_map = large_feature_map
-        self.drop_threshold = drop_threshold
-        self.drop_prob = drop_prob
-        self.lr = lr
-        self.lr_classifier_ratio = lr_classifier_ratio
-        self.momentum = momentum
-        self.weight_decay = weight_decay
-
-        self.sim_fg_thres = sim_fg_thres
-        self.sim_bg_thres = sim_bg_thres
-        self.loss_ratio_drop = loss_ratio_drop
-        self.loss_ratio_sim = loss_ratio_sim
-        self.loss_ratio_norm = loss_ratio_norm
-        self.wsol_method = wsol_method
+    def __init__(self, args, loader):
+        self.args = args
 
         self.model = self._set_model()
         self.model_multi = torch.nn.DataParallel(self.model)
 
-        if type_loss == 'APL':
-            self.criterion = APLLoss(gamma_neg=gamma_neg, gamma_pos=gamma_pos, clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True).cuda()
-        elif type_loss == 'BCE':
+        if args.type_loss == 'APL':
+            self.criterion = APLLoss(gamma_neg=args.gamma_neg, gamma_pos=args.gamma_pos, 
+                                     clip=0.05, eps=1e-8, disable_torch_grad_focal_loss=True).cuda()
+        elif args.type_loss == 'BCE':
             self.criterion = nn.BCEWithLogitsLoss().cuda()
 
-        if type_metric == 'mAP':
-            self.metrics = metrics.MultilabelAUPRC(num_labels=self._NUM_CLASSES_MAPPING[self.dataset_name])
-        elif type_metric == 'acc':
+        if args.type_metric == 'mAP':
+            self.metrics = metrics.MultilabelAUPRC(num_labels=self._NUM_CLASSES_MAPPING[self.args.dataset_name])
+        elif args.type_metric == 'acc':
             self.metrics = metrics.MultilabelAccuracy().to('cuda')
 
-        self.type_metric = type_metric
-        self.type_loss = type_loss
+        self.type_metric = args.type_metric
+        self.type_loss = args.type_loss
         self.l1_loss = nn.L1Loss().cuda()
         self.optimizer = self._set_optimizer()
         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
             self.optimizer,
-            milestones=lr_decay_points, 
-            gamma=lr_decay_rate,
+            milestones=args.lr_decay_points, 
+            gamma=args.lr_decay_rate,
             verbose=True
         )
 
         self.loader = loader
-        self.log_dir = log_dir
 
 
     def _set_model(self):
-        num_classes = self._NUM_CLASSES_MAPPING[self.dataset_name]
-        print("Loading model {}".format(self.architecture))
-        arch = self.architecture
+        num_classes = self._NUM_CLASSES_MAPPING[self.args.dataset_name]
+        print("Loading model {}".format(self.args.architecture))
+        arch = self.args.architecture
         model = wsod.__dict__[arch](
-            dataset_name=self.dataset_name,
-            architecture_type=self.architecture_type,
-            pretrained=self.pretrained,
+            dataset_name=self.args.dataset_name,
+            architecture_type=self.args.architecture_type,
+            pretrained=self.args.pretrained,
             num_classes=num_classes,
-            large_feature_map=self.large_feature_map,
-            drop_threshold=self.drop_threshold,
-            drop_prob=self.drop_prob)
+            large_feature_map=self.args.large_feature_map,
+            drop_threshold=self.args.drop_threshold,
+            drop_prob=self.args.drop_prob)
         model = model.cuda()
         return model
 
@@ -114,18 +94,18 @@ class Trainer(object):
         for name, parameter in self.model.named_parameters():
             if string_contains_any(
                     name,
-                    param_features_substring_list(self.architecture)):
-                if self.architecture == 'vgg16':
+                    param_features_substring_list(self.args.architecture)):
+                if self.args.architecture == 'vgg16':
                     param_features.append(parameter)
                     param_features_name.append(name)
-                elif self.architecture == 'resnet50':
+                elif self.args.architecture == 'resnet50':
                     param_classifiers.append(parameter)
                     param_classifiers_name.append(name)
             else:
-                if self.architecture == 'vgg16':
+                if self.args.architecture == 'vgg16':
                     param_classifiers.append(parameter)
                     param_classifiers_name.append(name)
-                elif self.architecture == 'resnet50':
+                elif self.args.architecture == 'resnet50':
                     param_features.append(parameter)
                     param_features_name.append(name)
 
@@ -133,15 +113,15 @@ class Trainer(object):
             [
                 {
                     'params': param_features, 
-                    'lr': self.lr
+                    'lr': self.args.lr
                 },
                 {
                     'params': param_classifiers,
-                    'lr': self.lr * self.lr_classifier_ratio
+                    'lr': self.args.lr * self.args.lr_classifier_ratio
                 }
             ],
-            momentum=self.momentum,
-            weight_decay=self.weight_decay,
+            momentum=self.args.momentum,
+            weight_decay=self.args.weight_decay,
             nesterov=True)
         return optimizer
 
@@ -193,16 +173,16 @@ class Trainer(object):
         logits = output_dict['logits']
         
         loss_classify = self.criterion(logits, target)
-        if self.wsol_method == 'bridging-gap':
+        if self.args.wsol_method == 'bridging-gap':
             loss_drop = self.l1_loss(output_dict['feature'], output_dict['feature_erased'])
             loss_sim, loss_norm = \
                 self._get_loss_alignment(output_dict['feature'], output_dict['sim'], target)
 
-            loss = loss_classify + self.loss_ratio_drop * loss_drop
+            loss = loss_classify + self.args.loss_ratio_drop * loss_drop
             if not warm:
-                loss += self.loss_ratio_sim * loss_sim + self.loss_ratio_norm * loss_norm
+                loss += self.args.loss_ratio_sim * loss_sim + self.args.loss_ratio_norm * loss_norm
                 
-        elif self.wsol_method == 'cam':
+        elif self.args.wsol_method == 'cam':
             loss = loss_classify
         else:
             raise ValueError("wsol_method should be in ['bridging-gap', 'cam']")
@@ -211,7 +191,7 @@ class Trainer(object):
 
     def _torch_save_model(self, filename):
         torch.save({'state_dict': self.model.state_dict()},
-                   os.path.join(self.log_dir, filename))
+                   os.path.join(self.args.log_dir, filename))
 
 
     def save_checkpoint(self, epoch):
@@ -219,7 +199,7 @@ class Trainer(object):
         
 
     def load_checkpoint(self, checkpoint_name):
-        checkpoint_path = os.path.join(self.log_dir, checkpoint_name)
+        checkpoint_path = os.path.join(self.args.log_dir, checkpoint_name)
 
         if os.path.isfile(checkpoint_path):
             checkpoint = torch.load(checkpoint_path)
