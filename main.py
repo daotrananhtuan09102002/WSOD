@@ -59,6 +59,7 @@ def main():
     parser.add_argument('--gamma_neg', type=int, default=4, help='Gamma negative for APL loss')
     parser.add_argument('--gamma_pos', type=int, default=0, help='Gamma positive for APL loss')
     parser.add_argument('--type_optimizer', type=str, default='SGD', help='Type optimizer')
+    parser.add_argument('--num_epoch', type=int, default=40, help="Number of epoch")
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
@@ -77,7 +78,7 @@ def main():
     print("Using loss:", args.type_loss)
     print("Start training...")
 
-    for epoch in range(40):
+    for epoch in range(args.num_epoch):
         # Check warm epoch
         warm = True if epoch < 10 else False
 
