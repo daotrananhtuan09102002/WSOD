@@ -109,20 +109,35 @@ class Trainer(object):
                     param_features.append(parameter)
                     param_features_name.append(name)
 
-        optimizer = torch.optim.SGD(
-            [
-                {
-                    'params': param_features, 
-                    'lr': self.args.lr
-                },
-                {
-                    'params': param_classifiers,
-                    'lr': self.args.lr * self.args.lr_classifier_ratio
-                }
-            ],
-            momentum=self.args.momentum,
-            weight_decay=self.args.weight_decay,
-            nesterov=True)
+        if self.args.type_optimizer == 'SGD': 
+            optimizer = torch.optim.SGD(
+                [
+                    {
+                        'params': param_features, 
+                        'lr': self.args.lr
+                    },
+                    {
+                        'params': param_classifiers,
+                        'lr': self.args.lr * self.args.lr_classifier_ratio
+                    }
+                ],
+                momentum=self.args.momentum,
+                weight_decay=self.args.weight_decay,
+                nesterov=True)
+        elif self.args.type_optimier == 'Adam':
+            optimizer = torch.optim.Adam(
+                [
+                    {
+                        'params': param_features, 
+                        'lr': self.args.lr
+                    },
+                    {
+                        'params': param_classifiers,
+                        'lr': self.args.lr * self.args.lr_classifier_ratio
+                    }
+                ],
+                weight_decay=self.args.weight_decay,
+            )
         return optimizer
 
     def _get_loss_alignment(self, feature, sim, target, eps=1e-15):
