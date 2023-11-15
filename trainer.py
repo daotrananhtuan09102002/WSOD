@@ -9,8 +9,11 @@ import argparse
 from torcheval import metrics
 from tqdm import tqdm
 from APLloss import APLLoss
+from wsod.resnet import resnet50
 
-
+BUILTIN_MODELS = {
+    'resnet50': resnet50,
+}
 
 class Trainer(object):
     _CHECKPOINT_NAME_TEMPLATE = '{}_checkpoint.pth.tar'
@@ -62,7 +65,7 @@ class Trainer(object):
         num_classes = self._NUM_CLASSES_MAPPING[self.args.dataset_name]
         print("Loading model {}".format(self.args.architecture))
         arch = self.args.architecture
-        model = wsod.__dict__[arch](
+        model = BUILTIN_MODELS[arch](
             dataset_name=self.args.dataset_name,
             architecture_type=self.args.architecture_type,
             pretrained=self.args.pretrained,
@@ -274,9 +277,3 @@ class Trainer(object):
             return dict(mAP_val=result)
         
         return dict(accuracy_val=result)
-    
-
-
-
-
-

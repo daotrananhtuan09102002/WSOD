@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 
-__all__ = ['AttentiveDrop']
-
 class AttentiveDrop(nn.Module):
     def __init__(self, drop_threshold=0.7, drop_prob=1.):
         super(AttentiveDrop, self).__init__()

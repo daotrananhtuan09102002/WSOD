@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
 import cv2
-
-__all__ = ['remove_layer', 'replace_layer', 'initialize_weights']
-
+import numpy as np
 
 def remove_layer(state_dict, keyword):
     keys = [key for key in state_dict.keys()]
