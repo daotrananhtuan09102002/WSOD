@@ -49,6 +49,7 @@ def main():
     parser.add_argument('--type_loss', type=str, default='BCE', help='Type loss')
     parser.add_argument('--gamma_neg', type=int, default=4, help='Gamma negative for APL loss')
     parser.add_argument('--gamma_pos', type=int, default=0, help='Gamma positive for APL loss')
+    parser.add_argument('--type_optimizer', type=str, default='SGD', help='Type optimizer')
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
