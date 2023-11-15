@@ -1,5 +1,5 @@
 import numpy as np
-import os
+import glob
 import torchvision
 import torch
 import torch.nn.functional as F
@@ -8,7 +8,6 @@ import torchvision.transforms.v2 as transforms
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-
 
 _IMAGE_MEAN_VALUE = [0.485, 0.456, 0.406]
 _IMAGE_STD_VALUE = [0.229, 0.224, 0.225]
@@ -26,7 +25,7 @@ class VOCDataset(Dataset):
                 root=root, 
                 year=year,
                 image_set=image_set, 
-                download=True
+                download=not(glob.glob('./voc/*.tar'))
         ))
         self.num_classes = num_classes
         self.transform = transform
@@ -57,20 +56,35 @@ class VOCDataset(Dataset):
                 'labels': label_multi_hot.float(),
                 'bounding_boxes': bounding_boxes
             }
+        
+def collate_fn(batch):
+    images = []
+    labels = []
+    bounding_boxes = []
+
+    for item in batch:
+        images.append(item[0])
+        labels.append(item[1]['labels'])
+        bounding_boxes.append(item[1]['bounding_boxes'])
+
+    images = torch.stack(images, dim=0)
+    labels = torch.stack(labels, dim=0)
+
+    return images, {'labels': labels, 'bounding_boxes': bounding_boxes}
 
 def get_data_loader(data_roots, batch_size, resize_size):
     dataset_transforms = dict(
         train=transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
             transforms.RandomHorizontalFlip(),
-            transforms.ToImage(),
-            transforms.ToDtype(torch.float32, scale=True),
+            transforms.ToImageTensor(),
+            transforms.ConvertDtype(torch.float32),
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
         ]),
         val=torchvision.transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
-            transforms.ToImage(),
-            transforms.ToDtype(torch.float32, scale=True),
+            transforms.ToImageTensor(),
+            transforms.ConvertDtype(torch.float32),
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
         ]))
 
@@ -99,6 +113,7 @@ def get_data_loader(data_roots, batch_size, resize_size):
             ),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=2)
+            num_workers=2,
+            collate_fn=collate_fn)
     }
     return loaders
