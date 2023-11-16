@@ -53,13 +53,22 @@ class Trainer(object):
         self.type_loss = args.type_loss
         self.l1_loss = nn.L1Loss().cuda()
         self.optimizer = self._set_optimizer()
-        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            self.optimizer,
-            milestones=args.lr_decay_points, 
-            gamma=args.lr_decay_rate,
-            verbose=True
-        )
-
+        if args.type_scheduler == 'MultiStepLR':
+            self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
+                self.optimizer,
+                milestones=args.lr_decay_points, 
+                gamma=args.lr_decay_rate,
+                verbose=True
+            )
+        elif args.type_scheduler == 'OneCycleLR':
+            self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
+                self.optimizer,
+                max_lr=args.lr,
+                steps_per_epoch=len(loader['train']),
+                epochs=args.num_epoch,
+                pct_start=0.2,
+                verbose=False
+            )
         self.loader = loader
 
 
@@ -249,6 +258,9 @@ class Trainer(object):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            if self.args.type_scheduler == 'OneCycleLR':
+                self.scheduler.step()
+            
 
         result = self.metrics.compute().item()
         self.metrics.reset()

@@ -62,6 +62,7 @@ def main():
     parser.add_argument('--num_epoch', type=int, default=40, help="Number of epoch")
     parser.add_argument('--Taylor_expansion', type=bool, default=True, help="Taylor expansion")
     parser.add_argument('--eval_every', type=int, default=5, help="Evaluate every")
+    parser.add_argument('--type_scheduler', type=str, default='MultiStepLR', help="Type scheduler")
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
@@ -78,6 +79,7 @@ def main():
     
     print(f"Using model:{args.architecture}-{args.architecture_type}")
     print("Using optimizer:", args.type_optimizer)
+    print("Using scheduler:", args.type_scheduler)
     print("Using loss:", args.type_loss)
     if args.type_loss == 'APL':
         print("Using Taylor expansion:", args.Taylor_expansion)
@@ -101,7 +103,8 @@ def main():
         if (epoch + 1) % 5 == 0:
             trainer.save_checkpoint(epoch + 1)
         
-        trainer.scheduler.step()
+        if args.type_scheduler == 'MultiStepLR':
+            trainer.scheduler.step()
 
         print("---------------------------------\n")
 if __name__ == '__main__':
