@@ -77,14 +77,14 @@ def get_data_loader(data_roots, batch_size, resize_size):
         train=transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
             transforms.RandomHorizontalFlip(),
-            transforms.ToImage(),
-            transforms.ToDtype(torch.float32, scale=True),
+            transforms.ToImageTensor(),
+            transforms.ConvertDtype(torch.float32),
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
         ]),
         val=torchvision.transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
-            transforms.ToImage(),
-            transforms.ToDtype(torch.float32, scale=True),
+            transforms.ToImageTensor(),
+            transforms.ConvertDtype(torch.float32),
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
         ]))
 
