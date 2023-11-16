@@ -10,6 +10,7 @@ from torcheval import metrics
 from tqdm import tqdm
 from APLloss import APLLoss
 from wsod.resnet import resnet50
+from wsod.util import add_weight_decay
 
 BUILTIN_MODELS = {
     'resnet50': resnet50,
@@ -140,7 +141,7 @@ class Trainer(object):
                 weight_decay=self.args.weight_decay,
                 nesterov=True)
         elif self.args.type_optimizer == 'Adam':
-            params = wsod.add_weight_decay(self.model, weight_decay=self.args.weight_decay)
+            params = add_weight_decay(self.model, weight_decay=self.args.weight_decay)
             optimizer = torch.optim.Adam(
                 params=params,
                 weight_decay=0,
@@ -251,7 +252,7 @@ class Trainer(object):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            
+
             if self.args.type_scheduler == 'OneCycleLR':
                 self.scheduler.step()
             
