@@ -21,7 +21,7 @@ def print_metrics(metrics):
     print("\tMetrics:")
     print("\t" + "-" * (maxlen + 1))
     for k, v in metrics.items():
-        print(f"\t{k.ljust(maxlen+1)}: {v:0.2f}")
+        print(f"\t{k.ljust(maxlen+1)}: {v:0.4f}")
 
 
 def main():
@@ -76,6 +76,7 @@ def main():
         loader=voc_dataloader,
     )
     
+    print(f"Using model:{args.architecture}-{args.architecture_type}")
     print("Using optimizer:", args.type_optimizer)
     print("Using loss:", args.type_loss)
     if args.type_loss == 'APL':
