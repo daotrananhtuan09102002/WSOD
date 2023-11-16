@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import random
 import argparse
+from wsod.util import ModelEma
 
 from data_loaders import get_data_loader
 
@@ -63,6 +64,7 @@ def main():
     parser.add_argument('--Taylor_expansion', type=bool, default=True, help="Taylor expansion")
     parser.add_argument('--eval_every', type=int, default=5, help="Evaluate every")
     parser.add_argument('--type_scheduler', type=str, default='MultiStepLR', help="Type scheduler")
+    parser.add_argument('--use_ema', type=bool, default=False, help="Use EMA")
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
@@ -77,6 +79,9 @@ def main():
         loader=voc_dataloader,
     )
     
+    if args.use_ema:
+        ema = ModelEma(trainer.model, decay=0.9997)
+
     print(f"Using model:{args.architecture}-{args.architecture_type}")
     print("Using optimizer:", args.type_optimizer)
     print("Using scheduler:", args.type_scheduler)
@@ -98,6 +103,9 @@ def main():
             result = trainer.evaluate()
             print(f'Evaluate at epoch{epoch + 1}')
             print_metrics(result)
+
+            if args.use_ema:
+                ema.update(trainer.model)
 
 
         if (epoch + 1) % 5 == 0:

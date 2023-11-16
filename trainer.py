@@ -140,18 +140,11 @@ class Trainer(object):
                 weight_decay=self.args.weight_decay,
                 nesterov=True)
         elif self.args.type_optimizer == 'Adam':
+            params = wsod.add_weight_decay(self.model, weight_decay=self.args.weight_decay)
             optimizer = torch.optim.Adam(
-                [
-                    {
-                        'params': param_features, 
-                        'lr': self.args.lr
-                    },
-                    {
-                        'params': param_classifiers,
-                        'lr': self.args.lr * self.args.lr_classifier_ratio
-                    }
-                ],
-                weight_decay=self.args.weight_decay,
+                params=params,
+                weight_decay=0,
+                lr=self.args.lr
             )
         return optimizer
 
@@ -258,6 +251,7 @@ class Trainer(object):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+            
             if self.args.type_scheduler == 'OneCycleLR':
                 self.scheduler.step()
             
