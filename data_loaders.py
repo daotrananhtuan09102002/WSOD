@@ -125,12 +125,12 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
             transforms.Resize((resize_size, resize_size)),
             transforms.AutoAugment(),
             transforms.ToTensor(),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
+            #transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
         ]),
         val=transforms.Compose([
             transforms.Resize((resize_size, resize_size)),
             transforms.ToTensor(),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
+            #transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
         ]))
 
 
