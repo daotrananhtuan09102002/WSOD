@@ -98,7 +98,10 @@ class VOCDatasetAugmented(Dataset):
         # Convert class indices to a one-hot matrix
         label_one_hot = F.one_hot(torch.tensor(class_indices), num_classes=self.num_classes).sum(dim=0)
 
-        return image, label_one_hot.float()
+        if self.image_set == 'train':
+            return image, label_one_hot.float()
+        else:
+            return image, {'labels': label_one_hot.float()}
         
 
 
