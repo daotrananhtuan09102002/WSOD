@@ -65,6 +65,7 @@ def main():
     parser.add_argument('--eval_every', type=int, default=5, help="Evaluate every")
     parser.add_argument('--type_scheduler', type=str, default='MultiStepLR', help="Type scheduler")
     parser.add_argument('--use_ema', type=bool, default=False, help="Use EMA")
+    parser.add_argument('--use_data_augmentation', type=bool, default=False, help="Use data augmentation")
     # Add more Trainer arguments as needed
 
     args = parser.parse_args()
@@ -72,7 +73,7 @@ def main():
     # Use arguments in your Trainer initialization
     set_random_seed(42)
     voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, 
-                                     resize_size=args.resize_size)
+                                     resize_size=args.resize_size, augment=args.use_data_augmentation)
 
     trainer = Trainer(
         args=args,
@@ -101,11 +102,8 @@ def main():
 
         if (epoch + 1) % args.eval_every == 0:
             result = trainer.evaluate()
-            print(f'Evaluate at epoch{epoch + 1}')
+            print(f'Evaluate at epoch: {epoch + 1}')
             print_metrics(result)
-
-            if args.use_ema:
-                ema.update(trainer.model)
 
 
         if (epoch + 1) % 5 == 0:
