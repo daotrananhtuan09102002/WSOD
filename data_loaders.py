@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 import torchvision.transforms.v2 as transforms
 
+
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -19,7 +20,7 @@ VOC_CLASSES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
 
 
 class VOCDataset(Dataset):
-    def __init__(self, root, year, image_set, transform=None, num_classes=20):
+    def __init__(self, root, year, image_set, transform=None, augment_transform=None, num_classes=20):
         self.voc_data = torchvision.datasets.wrap_dataset_for_transforms_v2(
             torchvision.datasets.VOCDetection(
                 root=root, 
@@ -29,6 +30,7 @@ class VOCDataset(Dataset):
         ))
         self.num_classes = num_classes
         self.transform = transform
+        self.augment_transform = augment_transform
         self.image_set = image_set
 
     def __len__(self):
@@ -46,6 +48,8 @@ class VOCDataset(Dataset):
         ).sum(dim=0)
 
         if self.image_set == 'train':
+            if self.augment_transform is not None:
+                image = self.augment_transform(image)
             return image, label_multi_hot.float()
         else:
             bounding_boxes = torch.cat(
@@ -73,43 +77,35 @@ def collate_fn(batch):
     return images, {'labels': labels, 'bounding_boxes': bounding_boxes}
 
 def get_data_loader(data_roots, batch_size, resize_size):
-    dataset_transforms = dict(
-        train=transforms.Compose([
-            transforms.Resize((resize_size, resize_size)),
-            transforms.AutoAugment(),
-            transforms.ToImageTensor(),
-            transforms.ConvertDtype(torch.float32),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
-        ]),
-        val=torchvision.transforms.Compose([
-            transforms.Resize((resize_size, resize_size)),
-            transforms.ToImageTensor(),
-            transforms.ConvertDtype(torch.float32),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
-        ]))
+    preprocess = transforms.Compose([
+        transforms.Resize((resize_size, resize_size)),
+        transforms.ToImageTensor(),
+        transforms.ConvertDtype(torch.float32),
+        transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
+    ])
 
-    loader_dict = {
-        'train': VOCDataset,
-        'val': VOCDataset
-    }
+    augment = transforms.Compose([
+        transforms.AutoAugment()
+    ])
 
     loaders = {
         'train': DataLoader(
-            loader_dict['train'](
+            VOCDataset(
                 root=data_roots,
                 year='2007',
                 image_set='train',
-                transform=dataset_transforms['train'],
+                transform=preprocess,
+                augment_transform=augment
             ),
             batch_size=batch_size,
             shuffle=True,
             num_workers=2),
         'val': DataLoader(
-            loader_dict['val'](
+            VOCDataset(
                 root=data_roots,
                 year='2007',
                 image_set='val',
-                transform=dataset_transforms['val'],
+                transform=preprocess,
             ),
             batch_size=batch_size,
             shuffle=False,
@@ -117,3 +113,4 @@ def get_data_loader(data_roots, batch_size, resize_size):
             collate_fn=collate_fn)
     }
     return loaders
+
