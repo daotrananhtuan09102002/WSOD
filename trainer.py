@@ -37,7 +37,7 @@ class Trainer(object):
         self.model_multi = torch.nn.DataParallel(self.model)
 
         if args.use_ema:
-            self.model_ema = ModelEma(self.model, decay=0.9997, device='cpu')
+            self.model_ema = ModelEma(self.model, decay=0.9997)
 
         if args.type_loss == 'APL':
             self.criterion = APLLoss(gamma_neg=args.gamma_neg, gamma_pos=args.gamma_pos, 
@@ -295,7 +295,7 @@ class Trainer(object):
         loader = self.loader[split]
 
         for batch_idx, (images, target) in enumerate(tqdm(loader)):
-            #images = images.cuda()
+            images = images.cuda()
 
             output_dict = self.model_ema.module(images)
             probs = output_dict['probs']
