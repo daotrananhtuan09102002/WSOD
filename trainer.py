@@ -5,12 +5,11 @@ import torch
 import torch.nn as nn
 
 import numpy as np
-import argparse
 from torcheval import metrics
 from tqdm import tqdm
 from APLloss import APLLoss
 from wsod.resnet import resnet50
-from wsod.util import add_weight_decay
+from wsod.util import add_weight_decay, ModelEma
 
 BUILTIN_MODELS = {
     'resnet50': resnet50,
@@ -36,6 +35,9 @@ class Trainer(object):
 
         self.model = self._set_model()
         self.model_multi = torch.nn.DataParallel(self.model)
+
+        if args.use_ema:
+            self.model_ema = ModelEma(self.model, decay=0.9997)
 
         if args.type_loss == 'APL':
             self.criterion = APLLoss(gamma_neg=args.gamma_neg, gamma_pos=args.gamma_pos, 
@@ -256,6 +258,8 @@ class Trainer(object):
             if self.args.type_scheduler == 'OneCycleLR':
                 self.scheduler.step()
             
+            if self.args.use_ema:
+                self.model_ema.update(self.model)
 
         result = self.metrics.compute().item()
         self.metrics.reset()
@@ -285,3 +289,23 @@ class Trainer(object):
             return dict(mAP_val=result)
         
         return dict(accuracy_val=result)
+    
+    def evaluate_ema_model(self, split='val'):
+        self.model_ema.module.eval()
+        loader = self.loader[split]
+
+        for batch_idx, (images, target) in enumerate(tqdm(loader)):
+            images = images.cuda()
+
+            output_dict = self.model_ema.module(images)
+            probs = output_dict['probs']
+
+            self.metrics.update(probs, target['labels'])
+
+        result = self.metrics.compute().item()
+        self.metrics.reset()
+
+        if self.type_metric == 'mAP':
+            return dict(mAP_val_ema=result)
+        
+        return dict(accuracy_val_ema=result)

@@ -2,11 +2,9 @@ import numpy as np
 import torch
 import random
 import argparse
-from wsod.util import ModelEma
 
 from data_loaders import get_data_loader
 
-from trainer import Trainer
 from trainer import Trainer
 
 def set_random_seed(seed):
@@ -80,8 +78,6 @@ def main():
         loader=voc_dataloader,
     )
     
-    if args.use_ema:
-        ema = ModelEma(trainer.model, decay=0.9997)
 
     print(f"Using model:{args.architecture}-{args.architecture_type}")
     print("Using optimizer:", args.type_optimizer)
@@ -105,6 +101,11 @@ def main():
             result = trainer.evaluate()
             print(f'Evaluate at epoch: {epoch + 1}')
             print_metrics(result)
+
+            if args.use_ema:
+                result = trainer.evaluate(warm=warm)
+                print(f'Evaluate at epoch: {epoch + 1} (EMA)')
+                print_metrics(result)
 
 
         if (epoch + 1) % 5 == 0:
