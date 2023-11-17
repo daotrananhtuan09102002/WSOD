@@ -103,7 +103,7 @@ def main():
             print_metrics(result)
 
             if args.use_ema:
-                result = trainer.evaluate(warm=warm)
+                result = trainer.evaluate_ema_model()
                 print(f'Evaluate at epoch: {epoch + 1} (EMA)')
                 print_metrics(result)
 
