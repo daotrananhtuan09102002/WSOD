@@ -106,35 +106,19 @@ class VOCDatasetAugmented(Dataset):
 
 
 def get_data_loader(data_roots, batch_size, resize_size, augment=False):
-    dataset_transforms = dict(
-        train=transforms.Compose([
-            transforms.Resize((resize_size, resize_size)),
-            transforms.ToImageTensor(),
-            transforms.ConvertDtype(torch.float32),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
-        ]),
-        val=transforms.Compose([
-            transforms.Resize((resize_size, resize_size)),
-            transforms.ToImageTensor(),
-            transforms.ConvertDtype(torch.float32),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
-        ]))
-    
-    dataset_transforms_augmented = dict(
-        train=transforms.Compose([
-            transforms.Resize((resize_size, resize_size)),
-            transforms.AutoAugment(),
-            transforms.ToTensor(),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
-        ]),
-        val=transforms.Compose([
-            transforms.Resize((resize_size, resize_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
-        ]))
-
-
     if augment:
+        dataset_transforms_augmented = dict(
+            train=transforms.Compose([
+                transforms.Resize((resize_size, resize_size)),
+                transforms.AutoAugment(),
+                transforms.ToTensor(),
+                transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
+            ]),
+            val=transforms.Compose([
+                transforms.Resize((resize_size, resize_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
+            ]))
         loaders = {
             'train': DataLoader(
                 VOCDatasetAugmented(
@@ -159,6 +143,19 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
         }
 
     else:    
+        dataset_transforms = dict(
+            train=transforms.Compose([
+                transforms.Resize((resize_size, resize_size)),
+                transforms.ToImageTensor(),
+                transforms.ConvertDtype(torch.float32),
+                transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
+            ]),
+            val=transforms.Compose([
+                transforms.Resize((resize_size, resize_size)),
+                transforms.ToImageTensor(),
+                transforms.ConvertDtype(torch.float32),
+                transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
+            ]))
         loaders = {
             'train': DataLoader(
                 VOCDataset(
