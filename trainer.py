@@ -232,6 +232,10 @@ class Trainer(object):
             self.model.load_state_dict(checkpoint['state_dict'], strict=True)
             print("Check {} loaded.".format(checkpoint_path))
 
+    def save_ema_model(self):
+        checkpoint_path = os.path.join(self.args.log_dir, f'ema.pth.tar')
+        torch.save({'state_dict': self.model_ema.module.state_dict()}, checkpoint_path)
+
 
     def train(self, warm=False):
         self.model_multi.train()
@@ -274,13 +278,14 @@ class Trainer(object):
         self.model_multi.eval()
         loader = self.loader[split]
 
-        for batch_idx, (images, target) in enumerate(tqdm(loader)):
-            images = images.cuda()
+        with torch.no_grad():
+            for batch_idx, (images, target) in enumerate(tqdm(loader)):
+                images = images.cuda()
 
-            output_dict = self.model_multi(images)
-            probs = output_dict['probs']
+                output_dict = self.model_multi(images)
+                probs = output_dict['probs']
 
-            self.metrics.update(probs, target['labels'])
+                self.metrics.update(probs, target['labels'])
 
         result = self.metrics.compute().item()
         self.metrics.reset()
@@ -294,13 +299,14 @@ class Trainer(object):
         self.model_ema.module.eval()
         loader = self.loader[split]
 
-        for batch_idx, (images, target) in enumerate(tqdm(loader)):
-            images = images.cuda()
+        with torch.no_grad():
+            for batch_idx, (images, target) in enumerate(tqdm(loader)):
+                images = images.cuda()
 
-            output_dict = self.model_ema.module(images)
-            probs = output_dict['probs']
+                output_dict = self.model_ema.module(images)
+                probs = output_dict['probs']
 
-            self.metrics.update(probs, target['labels'])
+                self.metrics.update(probs, target['labels'])
 
         result = self.metrics.compute().item()
         self.metrics.reset()

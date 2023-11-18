@@ -115,5 +115,11 @@ def main():
             trainer.scheduler.step()
 
         print("---------------------------------\n")
+
+    # Save ema model
+    if args.use_ema:
+        trainer.save_ema_model()
+
+    print("Training finished!")
 if __name__ == '__main__':
     main()
