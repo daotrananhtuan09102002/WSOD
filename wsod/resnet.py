@@ -98,7 +98,6 @@ class ResNetCam(nn.Module):
 
         pre_logit = self.avgpool(x)
         pre_logit = pre_logit.reshape(pre_logit.size(0), -1)
-        pre_logit = self.dropout(pre_logit)
         logits = self.fc(pre_logit)
         
         if self.training:
@@ -186,7 +185,6 @@ class ResNetDrop(ResNetCam):
 
         pre_logit = self.avgpool(unerased_x)
         pre_logit = pre_logit.view(pre_logit.size(0), -1)
-        pre_logit = self.dropout(pre_logit)
         logits = self.fc(pre_logit)
 
         x_normalized = F.normalize(unerased_x, dim=1)
