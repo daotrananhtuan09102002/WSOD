@@ -28,13 +28,17 @@ def main():
     parser = argparse.ArgumentParser(description='Your script description here.')
 
     # Data loader arguments
+    parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
     parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
 
-
     # Trainer arguments
-    parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
+    parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
+    parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
+    parser.add_argument('--eval_every', type=int, default=5, help="Evaluate every")
+
+    # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
     parser.add_argument('--architecture_type', type=str, default='cam', help='Model architecture type')
     parser.add_argument('--pretrained', type=bool, default=True, help='Use pre-trained weights')
@@ -53,7 +57,6 @@ def main():
     parser.add_argument('--loss_ratio_sim', type=float, default=0.5, help='Loss ratio similarity')
     parser.add_argument('--loss_ratio_norm', type=float, default=0.05, help='Loss ratio normalization')
     parser.add_argument('--wsol_method', type=str, default='cam', help='WSOL method')
-    parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--type_metric', type=str, default='acc', help='Type metric')
     parser.add_argument('--type_loss', type=str, default='BCE', help='Type loss')
     parser.add_argument('--gamma_neg', type=int, default=4, help='Gamma negative for APL loss')
@@ -61,9 +64,7 @@ def main():
     parser.add_argument('--type_optimizer', type=str, default='SGD', help='Type optimizer')
     parser.add_argument('--num_epoch', type=int, default=40, help="Number of epoch")
     parser.add_argument('--Taylor_expansion', type=bool, default=True, help="Taylor expansion")
-    parser.add_argument('--eval_every', type=int, default=5, help="Evaluate every")
     parser.add_argument('--type_scheduler', type=str, default='MultiStepLR', help="Type scheduler")
-    # Add more Trainer arguments as needed
 
     args = parser.parse_args()
 

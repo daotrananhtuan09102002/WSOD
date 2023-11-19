@@ -10,6 +10,8 @@ from torcheval import metrics
 from tqdm import tqdm
 from APLloss import APLLoss
 from wsod.resnet import resnet50
+from wsod.metrics import ConfusionMatrix
+from wsod.util import get_prediction, get_localization_report
 
 BUILTIN_MODELS = {
     'resnet50': resnet50,
@@ -271,22 +273,64 @@ class Trainer(object):
 
         return dict(accuracy=result, loss=loss_average)
     
+    @torch.no_grad()
     def evaluate(self, split='val'):
+        from data_loaders import VOC_CLASSES
         self.model_multi.eval()
         loader = self.loader[split]
+        
 
-        for batch_idx, (images, target) in enumerate(tqdm(loader)):
-            images = images.cuda()
+        num_cam_thresholds = self.args.num_cam_thresholds
+        cm_30 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.3) for i in range(num_cam_thresholds)]
+        cm_50 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.5) for i in range(num_cam_thresholds)]
+        cm_70 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.7) for i in range(num_cam_thresholds)]
 
-            output_dict = self.model_multi(images)
-            probs = output_dict['probs']
+        for batch_idx, (x, y) in enumerate(tqdm(loader)):
+            x = x.cuda()
 
-            self.metrics.update(probs, target['labels'])
+            y_pred = self.model_multi(x, return_cam=True, labels=y['labels'])
 
+            # Eval classification
+            self.metrics.update(y_pred['probs'], y['labels'])
+
+            # Eval localization
+            for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
+                preds = get_prediction(y_pred['cams'], cam_threshold)
+
+                for img_idx in range(x.shape[0]):
+                    for gt_class in torch.unique(torch.nonzero(y['labels'][img_idx]).flatten()):
+                        pred = preds[img_idx][preds[img_idx][:, 4] == gt_class]
+                        gt = y['bounding_boxes'][img_idx][y['bounding_boxes'][img_idx][:, 0] == gt_class]
+
+                        npred = pred.shape[0]
+
+                        # model has no predictions on this image
+                        if npred == 0:
+                            cm_30[cam_threshold_idx].process_batch(detections=None, labels=gt)
+                            cm_50[cam_threshold_idx].process_batch(detections=None, labels=gt)
+                            cm_70[cam_threshold_idx].process_batch(detections=None, labels=gt)
+                        else:
+                            cm_30[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+                            cm_50[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+                            cm_70[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+
+        # Classification result
         result = self.metrics.compute().item()
         self.metrics.reset()
 
+        # Localization result
+        tp, fp, fn = list(zip(*[list(zip(*[(cm.tp_fp_fn()) for cm in cm_at_iou])) for cm_at_iou in [cm_30, cm_50, cm_70]]))
+        tp = np.array(tp)
+        fp = np.array(fp)
+        fn = np.array(fn)
+
+        precision = np.divide(tp, tp + fp, out=np.zeros_like(tp), where=tp+fp!=0)
+        recall = np.divide(tp, tp + fn, out=np.zeros_like(tp), where=tp+fn!=0)
+        f1 = np.divide(2 * (precision * recall), precision + recall, out=np.zeros_like(tp), where=precision+recall!=0)
+
+        get_localization_report(tp, fp, fn, VOC_CLASSES)
+
         if self.type_metric == 'mAP':
-            return dict(mAP_val=result)
+            return dict(mAP_val=result, mean_average_f1=f1.mean())
         
-        return dict(accuracy_val=result)
+        return dict(accuracy_val=result, mean_average_f1=f1.mean())

@@ -79,5 +79,135 @@ def get_prediction(batch_cam, cam_threshold, image_size=(224, 224)):
 
                 prediction.append([x0, y0, x1, y1, class_index])
 
+        if len(prediction) == 0:
+            prediction.append([-1, -1, -1, -1, -1])
+
         output.append(prediction)
     return torch.nested.nested_tensor(output, dtype=torch.float32)
+
+def plot_localization_report(precision, recall, f1, num_cam_thresholds, plot_dir):
+    """
+    Args:
+        precision: Array(3, num cam thresholds, num classes)
+        recall: Array(3, num cam thresholds, num classes)
+        f1: Array(3, num cam thresholds, num classes)
+        num_cam_thresholds: int
+    Returns:
+        None 
+    """
+
+    import matplotlib.pyplot as plt
+
+    for iou_idx, iou in enumerate([0.3, 0.5, 0.7]):
+        avg_precision = np.mean(precision[iou_idx], axis=1)
+        avg_recall = np.mean(recall[iou_idx], axis=1)
+        avg_f1_score = np.mean(f1[iou_idx], axis=1)
+
+        thresholds = np.linspace(0.0, 0.9, num_cam_thresholds)
+
+        plt.figure(figsize=(7, 5))
+        plt.plot(thresholds, avg_precision, label='Average Precision')
+        plt.plot(thresholds, avg_recall, label='Average Recall')
+        plt.plot(thresholds, avg_f1_score, label='Average F1-score')
+        plt.xlabel('Threshold')
+        plt.ylabel('Score')
+        plt.title('Score vs Threshold')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+        plt.savefig(plot_dir + f'/iou_{iou}_score_vs_threshold.png')
+        plt.close()
+
+def custom_report(precision, recall, f1, class_names, cam_thresholds, digits=4):
+    """
+    Args:
+        precision: Array(3, num cam thresholds, num classes)
+        recall: Array(3, num cam thresholds, num classes)
+        f1: Array(3, num cam thresholds, num classes)
+        class_names: list of class names
+        cam_thresholds: list of cam thresholds
+    Returns:
+        None 
+    """
+
+    class_width = max(len(cn) for cn in class_names)
+    main_header_line = f"{'':>{class_width}}|{'Average Precision':^43}|{'Average Recall':^43}|{'Average F1 Score':^43}|{'Best F1 @ CAM Thresholds':^62}|"
+    print(main_header_line)
+
+    header_line = f"{'':^{class_width}}|" + f"{'IoU30':^10s}|{'IoU50':^10s}|{'IoU70':^10s}|{'Mean':^10s}|" * 3 + f"{'IoU30':^20}|{'IoU50':^20}|{'IoU70':^20}|"
+    print(header_line)
+    print('-' * len(header_line))
+
+    precision_mean_across_cam_thresholds = precision.mean(1)
+    recall_mean_across_cam_thresholds = recall.mean(1)
+    f1_mean_across_cam_thresholds = f1.mean(1)
+
+    best_cam_thresholds = f1.argmax(1)
+
+    for class_idx, class_name in enumerate(class_names):
+        class_line = f'{class_name:>{class_width}}|'
+
+        for iou_idx in range(3):
+            class_line += f'{precision_mean_across_cam_thresholds[iou_idx, class_idx]:^10.{digits}f}|'
+        class_line += f'{precision_mean_across_cam_thresholds[:, class_idx].mean():^10.{digits}f}|'
+
+        for iou_idx in range(3):
+            class_line += f'{recall_mean_across_cam_thresholds[iou_idx, class_idx]:^10.{digits}f}|'
+        class_line += f'{recall_mean_across_cam_thresholds[:, class_idx].mean():^10.{digits}f}|'
+
+        for iou_idx in range(3):
+            class_line += f'{f1_mean_across_cam_thresholds[iou_idx, class_idx]:^10.{digits}f}|'
+        class_line += f'{f1_mean_across_cam_thresholds[:, class_idx].mean():^10.{digits}f}|'
+
+        # print f1 max with cam threshold for each iou
+        for iou_idx in range(3):
+            max_f1 = f'{f1[iou_idx, best_cam_thresholds[iou_idx, class_idx], class_idx]:^10.{digits}f}'
+            at_cam_threshold = f'@ {cam_thresholds[best_cam_thresholds[iou_idx, class_idx]]:^8g}'
+            class_line += f'{max_f1 + at_cam_threshold}|'
+        print(class_line)
+
+    print('-' * len(header_line))
+
+    # print mean of each column
+    mean_line = f'{"Mean":>{class_width}}|'
+    for iou_idx in range(3):
+        mean_line += f'{precision_mean_across_cam_thresholds[iou_idx].mean():^10.{digits}f}|'
+    mean_line += f'{precision_mean_across_cam_thresholds.mean():^10.{digits}f}|'
+
+    for iou_idx in range(3):
+        mean_line += f'{recall_mean_across_cam_thresholds[iou_idx].mean():^10.{digits}f}|'
+    mean_line += f'{recall_mean_across_cam_thresholds.mean():^10.{digits}f}|'
+
+    for iou_idx in range(3):
+        mean_line += f'{f1_mean_across_cam_thresholds[iou_idx].mean():^10.{digits}f}|'
+    mean_line += f'{f1_mean_across_cam_thresholds.mean():^10.{digits}f}|'
+
+    print(mean_line)
+
+    # print mean f1 score across iou and cam thresholds
+    print(f"Mean Average F1 Score: {f1.mean():.{digits}f}")
+
+
+def get_localization_report(tp, fp, fn, class_names, plot_dir=None, digits=4):
+    """
+    Args:
+        tp: Array(3, num cam thresholds, num classes)
+        fp: Array(3, num cam thresholds, num classes)
+        fn: Array(3, num cam thresholds, num classes)
+
+    Returns:
+        None 
+    """
+    _, num_cam_thresholds, _ = tp.shape
+
+    # handle division by zero 
+    precision = np.divide(tp, tp + fp, out=np.zeros_like(tp), where=tp+fp!=0)
+    recall = np.divide(tp, tp + fn, out=np.zeros_like(tp), where=tp+fn!=0)
+    f1 = np.divide(2 * (precision * recall), precision + recall, out=np.zeros_like(tp), where=precision+recall!=0)
+
+    if plot_dir is not None:
+        plot_localization_report(precision, recall, f1, num_cam_thresholds, plot_dir)
+
+    custom_report(precision, recall, f1, class_names, np.linspace(0.0, 0.9, num_cam_thresholds), digits)
+    
+
