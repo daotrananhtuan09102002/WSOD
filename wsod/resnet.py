@@ -186,6 +186,7 @@ class ResNetDrop(ResNetCam):
 
         pre_logit = self.avgpool(unerased_x)
         pre_logit = pre_logit.view(pre_logit.size(0), -1)
+        pre_logit = self.dropout(pre_logit)
         logits = self.fc(pre_logit)
 
         x_normalized = F.normalize(unerased_x, dim=1)
