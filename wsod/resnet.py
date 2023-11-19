@@ -80,7 +80,7 @@ class ResNetCam(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=1)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
-        self.dropout = nn.Dropout(0.4)
+        self.dropout = nn.Dropout(0.5)
         self.sigmoid = nn.Sigmoid()
 
         initialize_weights(self.modules(), init_mode='xavier')
