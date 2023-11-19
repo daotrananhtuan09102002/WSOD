@@ -37,6 +37,7 @@ def main():
     parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
     parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every')
     parser.add_argument('--print_report', action='store_true', help='Print localization report')
+    parser.add_argument('--eval_classification_only', action='store_true', help='Evaluate classification only')
     
     # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
@@ -101,7 +102,11 @@ def main():
         print_metrics(result)
 
         if (epoch + 1) % args.eval_every == 0:
-            result = trainer.evaluate()
+            if args.eval_classification_only:
+                result = trainer.evaluate_classification()
+            else:
+                result = trainer.evaluate()
+
             print(f'Evaluate at epoch: {epoch + 1}')
             print_metrics(result)
 
@@ -109,7 +114,6 @@ def main():
                 result = trainer.evaluate_ema_model()
                 print(f'Evaluate at epoch: {epoch + 1} (EMA)')
                 print_metrics(result)
-
 
         if (epoch + 1) % 5 == 0:
             trainer.save_checkpoint(epoch + 1)

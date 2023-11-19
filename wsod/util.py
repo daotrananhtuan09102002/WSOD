@@ -229,22 +229,17 @@ def custom_report(precision, recall, f1, class_names, cam_thresholds, digits=4):
     print(f"Mean Average F1 Score: {f1.mean():.{digits}f}")
 
 
-def get_localization_report(tp, fp, fn, class_names, plot_dir=None, digits=4):
+def get_localization_report(precision, recall, f1, class_names, plot_dir=None, digits=4):
     """
     Args:
-        tp: Array(3, num cam thresholds, num classes)
-        fp: Array(3, num cam thresholds, num classes)
-        fn: Array(3, num cam thresholds, num classes)
+        precision: Array(3, num cam thresholds, num classes)
+        recall: Array(3, num cam thresholds, num classes)
+        f1: Array(3, num cam thresholds, num classes)
 
     Returns:
         None 
     """
-    _, num_cam_thresholds, _ = tp.shape
-
-    # handle division by zero 
-    precision = np.divide(tp, tp + fp, out=np.zeros_like(tp), where=tp+fp!=0)
-    recall = np.divide(tp, tp + fn, out=np.zeros_like(tp), where=tp+fn!=0)
-    f1 = np.divide(2 * (precision * recall), precision + recall, out=np.zeros_like(tp), where=precision+recall!=0)
+    _, num_cam_thresholds, _ = precision.shape
 
     if plot_dir is not None:
         plot_localization_report(precision, recall, f1, num_cam_thresholds, plot_dir)
