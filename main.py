@@ -64,7 +64,7 @@ def main():
     parser.add_argument('--type_optimizer', type=str, default='SGD', help='Type optimizer')
     parser.add_argument('--num_epoch', type=int, default=40, help='Number of epoch')
     parser.add_argument('--Taylor_expansion', action='store_true', help='Taylor expansion')
-    parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every)
+    parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every')
     parser.add_argument('--type_scheduler', type=str, default='MultiStepLR', help='Type scheduler')
     parser.add_argument('--use_ema', action='store_true', help='Use EMA')
     parser.add_argument('--use_data_augmentation', action='store_true', help='Use data augmentation')
