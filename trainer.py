@@ -3,15 +3,16 @@ import wsod.method
 import os
 import torch
 import torch.nn as nn
-
 import numpy as np
-import argparse
+
 from torcheval import metrics
 from tqdm import tqdm
 from APLloss import APLLoss
 from wsod.resnet import resnet50
+from wsod.util import add_weight_decay, ModelEma
 from wsod.metrics import ConfusionMatrix
 from wsod.util import get_prediction, get_localization_report
+
 
 BUILTIN_MODELS = {
     'resnet50': resnet50,
@@ -37,6 +38,9 @@ class Trainer(object):
 
         self.model = self._set_model()
         self.model_multi = torch.nn.DataParallel(self.model)
+
+        if args.use_ema:
+            self.model_ema = ModelEma(self.model, decay=0.9997)
 
         if args.type_loss == 'APL':
             self.criterion = APLLoss(gamma_neg=args.gamma_neg, gamma_pos=args.gamma_pos, 
@@ -142,18 +146,11 @@ class Trainer(object):
                 weight_decay=self.args.weight_decay,
                 nesterov=True)
         elif self.args.type_optimizer == 'Adam':
+            params = add_weight_decay(self.model, weight_decay=self.args.weight_decay)
             optimizer = torch.optim.Adam(
-                [
-                    {
-                        'params': param_features, 
-                        'lr': self.args.lr
-                    },
-                    {
-                        'params': param_classifiers,
-                        'lr': self.args.lr * self.args.lr_classifier_ratio
-                    }
-                ],
-                weight_decay=self.args.weight_decay,
+                params=params,
+                weight_decay=0,
+                lr=self.args.lr
             )
         return optimizer
 
@@ -238,6 +235,10 @@ class Trainer(object):
             self.model.load_state_dict(checkpoint['state_dict'], strict=True)
             print("Check {} loaded.".format(checkpoint_path))
 
+    def save_ema_model(self):
+        checkpoint_path = os.path.join(self.args.log_dir, f'ema.pth.tar')
+        torch.save({'state_dict': self.model_ema.module.state_dict()}, checkpoint_path)
+
 
     def train(self, warm=False):
         self.model_multi.train()
@@ -260,9 +261,12 @@ class Trainer(object):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
+
             if self.args.type_scheduler == 'OneCycleLR':
                 self.scheduler.step()
             
+            if self.args.use_ema:
+                self.model_ema.update(self.model)
 
         result = self.metrics.compute().item()
         self.metrics.reset()
@@ -275,44 +279,50 @@ class Trainer(object):
     
     @torch.no_grad()
     def evaluate(self, split='val'):
-        from data_loaders import VOC_CLASSES
         self.model_multi.eval()
         loader = self.loader[split]
         
+        for batch_idx, (images, target) in enumerate(tqdm(loader)):
+            images = images.cuda()
 
-        num_cam_thresholds = self.args.num_cam_thresholds
-        cm_30 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.3) for i in range(num_cam_thresholds)]
-        cm_50 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.5) for i in range(num_cam_thresholds)]
-        cm_70 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.7) for i in range(num_cam_thresholds)]
+            output_dict = self.model_multi(images)
+            probs = output_dict['probs']
 
-        for batch_idx, (x, y) in enumerate(tqdm(loader)):
-            x = x.cuda()
+            self.metrics.update(probs, target['labels'])
 
-            y_pred = self.model_multi(x, return_cam=True, labels=y['labels'])
+            num_cam_thresholds = self.args.num_cam_thresholds
+            cm_30 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.3) for i in range(num_cam_thresholds)]
+            cm_50 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.5) for i in range(num_cam_thresholds)]
+            cm_70 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.7) for i in range(num_cam_thresholds)]
 
-            # Eval classification
-            self.metrics.update(y_pred['probs'], y['labels'])
+            for batch_idx, (x, y) in enumerate(tqdm(loader)):
+                x = x.cuda()
 
-            # Eval localization
-            for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
-                preds = get_prediction(y_pred['cams'], cam_threshold)
+                y_pred = self.model_multi(x, return_cam=True, labels=y['labels'])
 
-                for img_idx in range(x.shape[0]):
-                    for gt_class in torch.unique(torch.nonzero(y['labels'][img_idx]).flatten()):
-                        pred = preds[img_idx][preds[img_idx][:, 4] == gt_class]
-                        gt = y['bounding_boxes'][img_idx][y['bounding_boxes'][img_idx][:, 0] == gt_class]
+                # Eval classification
+                self.metrics.update(y_pred['probs'], y['labels'])
 
-                        npred = pred.shape[0]
+                # Eval localization
+                for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
+                    preds = get_prediction(y_pred['cams'], cam_threshold)
 
-                        # model has no predictions on this image
-                        if npred == 0:
-                            cm_30[cam_threshold_idx].process_batch(detections=None, labels=gt)
-                            cm_50[cam_threshold_idx].process_batch(detections=None, labels=gt)
-                            cm_70[cam_threshold_idx].process_batch(detections=None, labels=gt)
-                        else:
-                            cm_30[cam_threshold_idx].process_batch(detections=pred, labels=gt)
-                            cm_50[cam_threshold_idx].process_batch(detections=pred, labels=gt)
-                            cm_70[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+                    for img_idx in range(x.shape[0]):
+                        for gt_class in torch.unique(torch.nonzero(y['labels'][img_idx]).flatten()):
+                            pred = preds[img_idx][preds[img_idx][:, 4] == gt_class]
+                            gt = y['bounding_boxes'][img_idx][y['bounding_boxes'][img_idx][:, 0] == gt_class]
+
+                            npred = pred.shape[0]
+
+                            # model has no predictions on this image
+                            if npred == 0:
+                                cm_30[cam_threshold_idx].process_batch(detections=None, labels=gt)
+                                cm_50[cam_threshold_idx].process_batch(detections=None, labels=gt)
+                                cm_70[cam_threshold_idx].process_batch(detections=None, labels=gt)
+                            else:
+                                cm_30[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+                                cm_50[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+                                cm_70[cam_threshold_idx].process_batch(detections=pred, labels=gt)
 
         # Classification result
         result = self.metrics.compute().item()
@@ -328,9 +338,33 @@ class Trainer(object):
         recall = np.divide(tp, tp + fn, out=np.zeros_like(tp), where=tp+fn!=0)
         f1 = np.divide(2 * (precision * recall), precision + recall, out=np.zeros_like(tp), where=precision+recall!=0)
 
-        get_localization_report(tp, fp, fn, VOC_CLASSES)
+        if self.arg.print_report:
+            from data_loaders import VOC_CLASSES
+            get_localization_report(tp, fp, fn, VOC_CLASSES)
 
         if self.type_metric == 'mAP':
             return dict(mAP_val=result, mean_average_f1=f1.mean())
-        
+          
         return dict(accuracy_val=result, mean_average_f1=f1.mean())
+        
+    @torch.no_grad()
+    def evaluate_ema_model(self, split='val'):
+        self.model_ema.module.eval()
+        loader = self.loader[split]
+
+        with torch.no_grad():
+            for batch_idx, (images, target) in enumerate(tqdm(loader)):
+                images = images.cuda()
+
+                output_dict = self.model_ema.module(images)
+                probs = output_dict['probs']
+
+                self.metrics.update(probs, target['labels'])
+
+        result = self.metrics.compute().item()
+        self.metrics.reset()
+
+        if self.type_metric == 'mAP':
+            return dict(mAP_val_ema=result)
+
+        return dict(accuracy_val_ema=result)

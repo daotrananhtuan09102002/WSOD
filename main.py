@@ -6,7 +6,6 @@ import argparse
 from data_loaders import get_data_loader
 
 from trainer import Trainer
-from trainer import Trainer
 
 def set_random_seed(seed):
     if seed is None:
@@ -36,8 +35,9 @@ def main():
     # Trainer arguments
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
-    parser.add_argument('--eval_every', type=int, default=5, help="Evaluate every")
-
+    parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every')
+    parser.add_argument('--print_report', action='store_true', help='Print localization report')
+    
     # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
     parser.add_argument('--architecture_type', type=str, default='cam', help='Model architecture type')
@@ -62,28 +62,33 @@ def main():
     parser.add_argument('--gamma_neg', type=int, default=4, help='Gamma negative for APL loss')
     parser.add_argument('--gamma_pos', type=int, default=0, help='Gamma positive for APL loss')
     parser.add_argument('--type_optimizer', type=str, default='SGD', help='Type optimizer')
-    parser.add_argument('--num_epoch', type=int, default=40, help="Number of epoch")
-    parser.add_argument('--Taylor_expansion', type=bool, default=True, help="Taylor expansion")
-    parser.add_argument('--type_scheduler', type=str, default='MultiStepLR', help="Type scheduler")
+    parser.add_argument('--num_epoch', type=int, default=40, help='Number of epoch')
+    parser.add_argument('--Taylor_expansion', action='store_true', help='Taylor expansion')
+    parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every)
+    parser.add_argument('--type_scheduler', type=str, default='MultiStepLR', help='Type scheduler')
+    parser.add_argument('--use_ema', action='store_true', help='Use EMA')
+    parser.add_argument('--use_data_augmentation', action='store_true', help='Use data augmentation')
 
     args = parser.parse_args()
 
     # Use arguments in your Trainer initialization
     set_random_seed(42)
     voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, 
-                                     resize_size=args.resize_size)
+                                     resize_size=args.resize_size, augment=args.use_data_augmentation)
 
     trainer = Trainer(
         args=args,
         loader=voc_dataloader,
     )
     
+
     print(f"Using model:{args.architecture}-{args.architecture_type}")
     print("Using optimizer:", args.type_optimizer)
     print("Using scheduler:", args.type_scheduler)
     print("Using loss:", args.type_loss)
     if args.type_loss == 'APL':
         print("Using Taylor expansion:", args.Taylor_expansion)
+    print("Using augmentation:", args.use_data_augmentation)
     print("Start training...")
 
     for epoch in range(args.num_epoch):
@@ -97,8 +102,13 @@ def main():
 
         if (epoch + 1) % args.eval_every == 0:
             result = trainer.evaluate()
-            print(f'Evaluate at epoch{epoch + 1}')
+            print(f'Evaluate at epoch: {epoch + 1}')
             print_metrics(result)
+
+            if args.use_ema:
+                result = trainer.evaluate_ema_model()
+                print(f'Evaluate at epoch: {epoch + 1} (EMA)')
+                print_metrics(result)
 
 
         if (epoch + 1) % 5 == 0:
@@ -108,5 +118,11 @@ def main():
             trainer.scheduler.step()
 
         print("---------------------------------\n")
+
+    # Save ema model
+    if args.use_ema:
+        trainer.save_ema_model()
+
+    print("Training finished!")
 if __name__ == '__main__':
     main()
