@@ -277,7 +277,7 @@ class Trainer(object):
 
         return dict(accuracy=result, loss=loss_average)
     
-    @torch.no_grad()
+    #@torch.no_grad()
     def eval_classification_only(self, split='val'):
         self.model_multi.eval()
         loader = self.loader[split]
