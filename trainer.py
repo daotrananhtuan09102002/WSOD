@@ -351,7 +351,7 @@ class Trainer(object):
         recall = np.divide(tp, tp + fn, out=np.zeros_like(tp), where=tp+fn!=0)
         f1 = np.divide(2 * (precision * recall), precision + recall, out=np.zeros_like(tp), where=precision+recall!=0)
 
-        if self.arg.print_report:
+        if self.args.print_report:
             from data_loaders import VOC_CLASSES
             get_localization_report(precision, recall, f1, VOC_CLASSES)
 
