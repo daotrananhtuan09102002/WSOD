@@ -103,7 +103,7 @@ def main():
 
         if (epoch + 1) % args.eval_every == 0:
             if args.eval_classification_only:
-                result = trainer.evaluate_classification()
+                result = trainer.evaluate_classification_only()
             else:
                 result = trainer.evaluate()
 
