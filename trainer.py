@@ -321,7 +321,7 @@ class Trainer(object):
                 preds = get_prediction(y_pred['cams'], cam_threshold)
 
                 for img_idx in range(x.shape[0]):
-                    for gt_class in torch.unique(torch.nonzero(y['labels'][img_idx]).flatten()):
+                    for gt_class in torch.nonzero(y['labels'][img_idx]).flatten():
                         pred = preds[img_idx][preds[img_idx][:, 4] == gt_class]
                         gt = y['bounding_boxes'][img_idx][y['bounding_boxes'][img_idx][:, 0] == gt_class]
 
