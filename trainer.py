@@ -11,7 +11,7 @@ from APLloss import APLLoss
 from wsod.resnet import resnet50
 from wsod.util import add_weight_decay, ModelEma
 from wsod.metrics import ConfusionMatrix
-from wsod.util import get_prediction, get_localization_report
+from wsod.util import get_prediction, custom_report, plot_localization_report
 
 
 BUILTIN_MODELS = {
@@ -300,6 +300,12 @@ class Trainer(object):
     
     @torch.no_grad()
     def evaluate(self, split='val'):
+        """
+        Args:
+            split: str, in ['train', 'val', 'test']
+        """
+        from data_loaders import VOC_CLASSES
+
         self.model_multi.eval()
         loader = self.loader[split]
         
@@ -352,8 +358,10 @@ class Trainer(object):
         f1 = np.divide(2 * (precision * recall), precision + recall, out=np.zeros_like(tp), where=precision+recall!=0)
 
         if self.args.print_report:
-            from data_loaders import VOC_CLASSES
-            get_localization_report(precision, recall, f1, VOC_CLASSES)
+            custom_report(precision, recall, f1, VOC_CLASSES, num_cam_thresholds)
+        
+        if self.args.plot_info or self.args.additional_info_path is not None:
+            plot_localization_report(precision, recall, f1, num_cam_thresholds, self.args.additional_info_path, self.args.plot_info)
 
         if self.type_metric == 'mAP':
             return dict(mAP_val=result, mean_average_f1=f1.mean())

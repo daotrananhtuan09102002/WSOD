@@ -57,10 +57,11 @@ def get_prediction(batch_cam, cam_threshold, image_size=(224, 224)):
         for class_index, cam in cam_per_image.items():
             cam = cam.detach().cpu().numpy()
             cam = cv2.resize(cam, image_size, interpolation=cv2.INTER_CUBIC)
+            cam = cv2.normalize(cam, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F).astype(np.float32)
 
             _, thr_gray_heatmap = cv2.threshold(
                 src=cam,
-                thresh=cam_threshold * cam.max(),
+                thresh=int(cam_threshold * cam.max()),
                 maxval=255,
                 type=cv2.THRESH_BINARY
             )
@@ -126,50 +127,73 @@ def add_weight_decay(model, weight_decay=1e-4, skip_list=()):
         {'params': no_decay, 'weight_decay': 0.},
         {'params': decay, 'weight_decay': weight_decay}]
 
-def plot_localization_report(precision, recall, f1, num_cam_thresholds, plot_dir):
+def plot_localization_report(precision, recall, f1, num_cam_thresholds, path=None, show=False):
     """
     Args:
         precision: Array(3, num cam thresholds, num classes)
         recall: Array(3, num cam thresholds, num classes)
         f1: Array(3, num cam thresholds, num classes)
-        num_cam_thresholds: int
+        num_cam_thresholds: int,
+        path: str, path to save plot
+        show: bool, whether to show plot
     Returns:
         None 
     """
+    if path is None and show == False:
+        return
 
     import matplotlib.pyplot as plt
+
+    fig, axs = plt.subplots(2, 2, figsize=(10, 7))
+    thresholds = np.linspace(0.0, 0.9, num_cam_thresholds)
 
     for iou_idx, iou in enumerate([0.3, 0.5, 0.7]):
         avg_precision = np.mean(precision[iou_idx], axis=1)
         avg_recall = np.mean(recall[iou_idx], axis=1)
         avg_f1_score = np.mean(f1[iou_idx], axis=1)
 
-        thresholds = np.linspace(0.0, 0.9, num_cam_thresholds)
+        pos = (iou_idx//2, iou_idx%2)
+        axs[pos].plot(thresholds, avg_precision, label='Avg Precision')
+        axs[pos].plot(thresholds, avg_recall, label='Avg Recall')
+        axs[pos].plot(thresholds, avg_f1_score, label='Avg F1-score')
+        axs[pos].set_xlabel('Threshold')
+        axs[pos].set_ylabel('Score')
+        axs[pos].set_title(f'Score vs Threshold @ IoU={iou}')
+        axs[pos].legend()
+        axs[pos].grid(True)
 
-        plt.figure(figsize=(7, 5))
-        plt.plot(thresholds, avg_precision, label='Average Precision')
-        plt.plot(thresholds, avg_recall, label='Average Recall')
-        plt.plot(thresholds, avg_f1_score, label='Average F1-score')
-        plt.xlabel('Threshold')
-        plt.ylabel('Score')
-        plt.title('Score vs Threshold')
-        plt.legend()
-        plt.grid(True)
+    axs[1, 1].plot(thresholds, f1.mean(2).mean(0), label='F1 Score')
+    axs[1, 1].plot(thresholds, precision.mean(2).mean(0), label='Precision')
+    axs[1, 1].plot(thresholds, recall.mean(2).mean(0), label='Recall')
+    axs[1, 1].set_xlabel('Threshold')
+    axs[1, 1].set_ylabel('Score')
+    axs[1, 1].set_title('Score vs Threshold')
+    axs[1, 1].legend()
+    axs[1, 1].grid(True)
+
+    plt.tight_layout()
+    
+    if path is not None:
+        plt.savefig(path + f'/additional_info.png')
+    
+    if show:
         plt.show()
-        plt.savefig(plot_dir + f'/iou_{iou}_score_vs_threshold.png')
-        plt.close()
+    
+    plt.close()
 
-def custom_report(precision, recall, f1, class_names, cam_thresholds, digits=4):
+def custom_report(precision, recall, f1, class_names, num_cam_thresholds, digits=4):
     """
     Args:
         precision: Array(3, num cam thresholds, num classes)
         recall: Array(3, num cam thresholds, num classes)
         f1: Array(3, num cam thresholds, num classes)
         class_names: list of class names
-        cam_thresholds: list of cam thresholds
+        num_cam_thresholds: int
     Returns:
         None 
     """
+
+    cam_thresholds = np.linspace(0.0, 0.9, num_cam_thresholds)
 
     class_width = max(len(cn) for cn in class_names)
     main_header_line = f"{'':>{class_width}}|{'Average Precision':^43}|{'Average Recall':^43}|{'Average F1 Score':^43}|{'Best F1 @ CAM Thresholds':^62}|"
@@ -227,21 +251,3 @@ def custom_report(precision, recall, f1, class_names, cam_thresholds, digits=4):
 
     # print mean f1 score across iou and cam thresholds
     print(f"Mean Average F1 Score: {f1.mean():.{digits}f}")
-
-
-def get_localization_report(precision, recall, f1, class_names, plot_dir=None, digits=4):
-    """
-    Args:
-        precision: Array(3, num cam thresholds, num classes)
-        recall: Array(3, num cam thresholds, num classes)
-        f1: Array(3, num cam thresholds, num classes)
-
-    Returns:
-        None 
-    """
-    _, num_cam_thresholds, _ = precision.shape
-
-    if plot_dir is not None:
-        plot_localization_report(precision, recall, f1, num_cam_thresholds, plot_dir)
-
-    custom_report(precision, recall, f1, class_names, np.linspace(0.0, 0.9, num_cam_thresholds), digits)
