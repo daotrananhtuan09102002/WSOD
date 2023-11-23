@@ -318,7 +318,7 @@ class Trainer(object):
 
             # Eval localization
             for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
-                preds = get_prediction(y_pred['cams'], cam_threshold)
+                preds = get_prediction(y_pred['cams'], cam_threshold, (self.args.resize_size, self.args.resize_size))
 
                 for img_idx in range(x.shape[0]):
                     for gt_class in torch.nonzero(y['labels'][img_idx]).flatten():
