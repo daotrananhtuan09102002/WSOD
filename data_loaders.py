@@ -146,14 +146,12 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
         dataset_transforms = dict(
             train=transforms.Compose([
                 transforms.Resize((resize_size, resize_size)),
-                transforms.ToImage(),
-                transforms.ToDtype(torch.float32, scale=True),
+                transforms.ToTensor(),
                 transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
             ]),
             val=transforms.Compose([
                 transforms.Resize((resize_size, resize_size)),
-                transforms.ToImage(),
-                transforms.ToDtype(torch.float32, scale=True),
+                transforms.ToTensor(),
                 transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
             ]))
         loaders = {
