@@ -11,7 +11,7 @@ from APLloss import APLLoss
 from wsod.resnet import resnet50
 from wsod.util import add_weight_decay, ModelEma
 from wsod.metrics import ConfusionMatrix
-from wsod.util import get_prediction, custom_report, plot_localization_report
+from wsod.util import get_prediction, custom_report, plot_localization_report, process_batch
 
 
 BUILTIN_MODELS = {
@@ -309,10 +309,12 @@ class Trainer(object):
         self.model_multi.eval()
         loader = self.loader[split]
         
-        num_cam_thresholds = self.args.num_cam_thresholds
-        cm_30 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.3) for i in range(num_cam_thresholds)]
-        cm_50 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.5) for i in range(num_cam_thresholds)]
-        cm_70 = [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=0.7) for i in range(num_cam_thresholds)]
+        num_cam_thresholds = 1 if self.args.use_otsu else self.args.num_cam_thresholds
+        cm_list = [
+            [ConfusionMatrix(nc=self._NUM_CLASSES_MAPPING[self.args.dataset_name], iou_thres=iou_thres) for i in range(num_cam_thresholds)]
+              for iou_thres in self.args.iou_thresholds
+        ]
+
 
         for batch_idx, (x, y) in enumerate(tqdm(loader)):
             x = x.cuda()
@@ -323,32 +325,20 @@ class Trainer(object):
             self.metrics.update(y_pred['probs'], y['labels'])
 
             # Eval localization
-            for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
-                preds = get_prediction(y_pred['cams'], cam_threshold, (self.args.resize_size, self.args.resize_size))
-
-                for img_idx in range(x.shape[0]):
-                    for gt_class in torch.nonzero(y['labels'][img_idx]).flatten():
-                        pred = preds[img_idx][preds[img_idx][:, 4] == gt_class]
-                        gt = y['bounding_boxes'][img_idx][y['bounding_boxes'][img_idx][:, 0] == gt_class]
-
-                        npred = pred.shape[0]
-
-                        # model has no predictions on this image
-                        if npred == 0:
-                            cm_30[cam_threshold_idx].process_batch(detections=None, labels=gt)
-                            cm_50[cam_threshold_idx].process_batch(detections=None, labels=gt)
-                            cm_70[cam_threshold_idx].process_batch(detections=None, labels=gt)
-                        else:
-                            cm_30[cam_threshold_idx].process_batch(detections=pred, labels=gt)
-                            cm_50[cam_threshold_idx].process_batch(detections=pred, labels=gt)
-                            cm_70[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+            if self.args.use_otsu:
+                preds = get_prediction(y_pred['cams'], None, (self.args.resize_size, self.args.resize_size))
+                process_batch(preds, cm_list, x, y, None)
+            else:
+                for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
+                    preds = get_prediction(y_pred['cams'], cam_threshold, (self.args.resize_size, self.args.resize_size))
+                    process_batch(preds, cm_list, x, y, cam_threshold_idx)
 
         # Classification result
         result = self.metrics.compute().item()
         self.metrics.reset()
 
         # Localization result
-        tp, fp, fn = list(zip(*[list(zip(*[(cm.tp_fp_fn()) for cm in cm_at_iou])) for cm_at_iou in [cm_30, cm_50, cm_70]]))
+        tp, fp, fn = list(zip(*[list(zip(*[(cm.tp_fp_fn()) for cm in cm_at_iou])) for cm_at_iou in cm_list]))
         tp = np.array(tp)
         fp = np.array(fp)
         fn = np.array(fn)
@@ -360,7 +350,7 @@ class Trainer(object):
         if self.args.print_report:
             custom_report(precision, recall, f1, VOC_CLASSES, num_cam_thresholds)
         
-        if self.args.plot_info or self.args.additional_info_path is not None:
+        if not self.args.use_otsu and (self.args.plot_info or self.args.additional_info_path is not None):
             plot_localization_report(precision, recall, f1, num_cam_thresholds, self.args.additional_info_path, self.args.plot_info)
 
         if self.type_metric == 'mAP':

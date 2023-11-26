@@ -57,14 +57,23 @@ def get_prediction(batch_cam, cam_threshold, image_size=(224, 224)):
         for class_index, cam in cam_per_image.items():
             cam = cam.detach().cpu().numpy()
             cam = cv2.resize(cam, image_size, interpolation=cv2.INTER_CUBIC)
-            cam = cv2.normalize(cam, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F).astype(np.float32)
 
-            _, thr_gray_heatmap = cv2.threshold(
-                src=cam,
-                thresh=int(cam_threshold * cam.max()),
-                maxval=255,
-                type=cv2.THRESH_BINARY
-            )
+            if cam_threshold is None:
+                cam = cv2.normalize(cam, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX).astype(np.uint8)
+                _, thr_gray_heatmap = cv2.threshold(
+                    src=cam,
+                    thresh=0,
+                    maxval=255,
+                    type=cv2.THRESH_BINARY + cv2.THRESH_OTSU
+                )
+            else:
+                cam = cv2.normalize(cam, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+                _, thr_gray_heatmap = cv2.threshold(
+                    src=cam,
+                    thresh=int(cam_threshold * cam.max()),
+                    maxval=255,
+                    type=cv2.THRESH_BINARY
+                )
             
             contours, _ = cv2.findContours(
                 image=thr_gray_heatmap.astype(np.uint8),
@@ -251,3 +260,35 @@ def custom_report(precision, recall, f1, class_names, num_cam_thresholds, digits
 
     # print mean f1 score across iou and cam thresholds
     print(f"Mean Average F1 Score: {f1.mean():.{digits}f}")
+
+def process_batch(preds, cm_list, x, y, cam_threshold_idx=None):
+    """ Process batch of predictions
+
+    Args:
+        preds: Array[B, None, 5], x1, y1, x2, y2, class
+        cm_list: list of confusion matrix at different iou thresholds
+        x: Array[B, 3, H, W], images
+        y: dict of Array[B, num_classes], labels
+    """
+    for img_idx in range(x.shape[0]):
+        for gt_class in torch.nonzero(y['labels'][img_idx]).flatten():
+            pred = preds[img_idx][preds[img_idx][:, 4] == gt_class]
+            gt = y['bounding_boxes'][img_idx][y['bounding_boxes'][img_idx][:, 0] == gt_class]
+
+            npred = pred.shape[0]
+
+            # model has no predictions on this image
+            if npred == 0:
+                if cam_threshold_idx is not None:
+                    for cm in cm_list:
+                        cm[cam_threshold_idx].process_batch(detections=None, labels=gt)
+                else:
+                    for cm in cm_list:
+                        cm[0].process_batch(detections=None, labels=gt)
+            else:
+                if cam_threshold_idx is not None:
+                    for cm in cm_list:
+                        cm[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+                else:
+                    for cm in cm_list:
+                        cm[0].process_batch(detections=pred, labels=gt)
