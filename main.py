@@ -36,11 +36,15 @@ def main():
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
     parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every')
-    parser.add_argument('--print_report', action='store_true', help='Print localization report')
+    parser.add_argument('--print_report', action='store_true', help='Print localization report per class')
     parser.add_argument('--additional_info_path', type=str, default=None, help='Path to save additional info plot')
     parser.add_argument('--plot_info', action='store_true', help='Plot additional info')
     parser.add_argument('--eval_classification_only', action='store_true', help='Evaluate classification only')
     
+    # Method arguments
+    parser.add_argument('--use_otsu', action='store_true', help='Use Otsu thresholding to get bounding box')
+    parser.add_argument('--iou_thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
+
     # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
     parser.add_argument('--architecture_type', type=str, default='cam', help='Model architecture type')
