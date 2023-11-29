@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.model_zoo import load_url
 
-from .method import AttentiveDrop
+from .method.drop import AttentiveDrop
 from .util import remove_layer
 from .util import initialize_weights
 
