@@ -179,8 +179,8 @@ class Trainer(object):
         sim_flat = torch.flatten(sim, start_dim=2)
         
         # sim loss
-        sim_fg = (feature_norm_minmax_flat > 0.6).float()
-        sim_bg = (feature_norm_minmax_flat < 0.4).float()
+        sim_fg = (feature_norm_minmax_flat > self.args.sim_fg_thres).float()
+        sim_bg = (feature_norm_minmax_flat < self.args.sim_bg_thres).float()
 
         sim_fg_mean = (sim_fg[:, None] * sim_flat).sum(dim=-1) / (sim_fg.sum(dim=-1) + eps)[:, None]
         sim_bg_mean = (sim_bg[:, None] * sim_flat).sum(dim=-1) / (sim_bg.sum(dim=-1) + eps)[:, None]
