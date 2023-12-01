@@ -1,0 +1,29 @@
+ResNet50:
+    BCE - SGD - MultiStepLR - CAM - 224: mAP_train = 97.81%, mAP_val = 84.69%, mAP_test = 84.33%, loc_val = 0.1857
+    BCE - SGD - MultiStepLR - Bridging(Average) - 224: mAP_train: 93.92%, mAP_val: 81.92%, mAP_test: 81.59%, loc_val = 0.1910
+    BCE - SGD - MultiStepLR - Bridging(Prod) - 224: mAP_train = 97.49%, mAP_val= 83.26%, mAP_test = 82.83%, loc_val = 0.1897
+    BCE - Adam - OneCycle - CAM  - Augment - EMA - 224: mAP_train = 98.91%, mAP_val = 74.3%
+
+    APL - Adam - MultiStepLR - CAM - 224:  mAP_train = 99.98, mAP_val = 56.57
+
+    APL - Adam - OneCycleLR - Bridging - 224: mAP_train = 99.98, mAP_val = 84.76, loc_val = 0.1783 (ver4)
+    APL - Adam - OneCycleLR - CAM - 224: mAP_train = 99.98, mAP_val = 84.95, loc_val = 0.1748 (ver1)
+
+    APL - Adam - OneCycleLR - EMA Model - Augment - Bridging - 224: mAP_val=85.48 (ver13)
+    APL - Adam - OneCycleLR - EMA Model - Augment - CAM - 224: mAP_val=85.34 (ver15)
+
+    APL - Adam - OneCycleLR - EMA Model - Augment - Bridging - 384: mAP_val=88.00 (ver12)
+    APL - Adam - OneCycleLR - CAM - 384: mAP_val=85.91, loc_val = 0.1783 (ver8)
+
+VGG16:
+    BCE - SGD - CAM: WIP
+    BCE - SGD - Bridging: mAP_val = 0.7588, loc_val = 0.2344
+
+    APL - Adam - CAM: WIP
+    APL - Adam - Bridging: mAP_val = 0.8142, loc_val = 0.2475
+
+
+
+
+
+
