@@ -25,7 +25,7 @@ class VOCDataset(Dataset):
                 root=root, 
                 year=year,
                 image_set=image_set, 
-                download=not(glob.glob('./voc/*.tar'))
+                download=False
         ))
         self.num_classes = num_classes
         self.transform = transform
