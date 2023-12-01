@@ -9,6 +9,7 @@ from torcheval import metrics
 from tqdm import tqdm
 from APLloss import APLLoss
 from wsod.resnet import resnet50
+from wsod.vgg import vgg16
 from wsod.util import add_weight_decay, ModelEma
 from wsod.metrics import ConfusionMatrix
 from wsod.util import get_prediction, custom_report, plot_localization_report, process_batch
@@ -16,6 +17,7 @@ from wsod.util import get_prediction, custom_report, plot_localization_report, p
 
 BUILTIN_MODELS = {
     'resnet50': resnet50,
+    'vgg16': vgg16
 }
 
 class Trainer(object):
