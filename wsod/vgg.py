@@ -85,6 +85,7 @@ class VggDrop(nn.Module):
         self.relu = nn.ReLU(inplace=False)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(1024, num_classes)
+        self.sigmoid = nn.Sigmoid()
         initialize_weights(self.modules(), init_mode='he')
 
     def forward(self, x, labels=None, return_cam=False):
