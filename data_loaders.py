@@ -75,8 +75,13 @@ def collate_fn(batch):
 
 class VOCDatasetAugmented(Dataset):
     def __init__(self, root, year, image_set, transform=None, num_classes=20):
-        self.voc_data = torchvision.datasets.VOCDetection(root=root, year=year,
-                                                          image_set=image_set, download=False)
+        self.voc_data = torchvision.datasets.wrap_dataset_for_transforms_v2(
+            torchvision.datasets.VOCDetection(
+                root=root, 
+                year=year,
+                image_set=image_set, 
+                download=False
+        ))
         self.num_classes = num_classes
         self.transform = transform
         self.image_set = image_set
