@@ -157,7 +157,6 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
         dataset_transforms = dict(
             train=transforms.Compose([
                 transforms.Resize((resize_size, resize_size)),
-                transforms.RandAugment(),
                 transforms.ToImageTensor(),
                 transforms.ConvertImageDtype(torch.float),
                 transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
