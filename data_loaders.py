@@ -90,23 +90,27 @@ class VOCDatasetAugmented(Dataset):
         return len(self.voc_data)
 
     def __getitem__(self, index):
-        image, target = self.voc_data[index]
+        sample = self.voc_data[index]
 
-        image = self.transform(image)
+        image, target = self.transform(sample)
 
-        # Extract labels from the target
-        labels = target['annotation']['object']
-
-        # Convert labels to a list of class indices, unique label
-        class_indices = list(set(VOC_CLASSES.index(obj['name']) for obj in labels))
-
-        # Convert class indices to a one-hot matrix
-        label_one_hot = F.one_hot(torch.tensor(class_indices), num_classes=self.num_classes).sum(dim=0)
+        # Convert class indices to a multi-hot matrix
+        label_multi_hot = F.one_hot(
+            torch.unique(target['labels']) - 1, 
+            num_classes=self.num_classes
+        ).sum(dim=0)
 
         if self.image_set == 'train':
-            return image, label_one_hot.float()
+            return image, label_multi_hot.float()
         else:
-            return image, {'labels': label_one_hot.float()}
+            bounding_boxes = torch.cat(
+                (target['labels'][:, None] - 1 , target['boxes']), 
+                dim=1
+            )
+            return image, { 
+                'labels': label_multi_hot.float(),
+                'bounding_boxes': bounding_boxes
+            }
         
 
 
