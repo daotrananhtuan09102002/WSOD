@@ -37,6 +37,7 @@ class VOCDataset(Dataset):
     def __getitem__(self, index):
         sample = self.voc_data[index]
 
+        print(sample)
         image, target = self.transform(sample)
 
         # Convert class indices to a multi-hot matrix
@@ -92,7 +93,6 @@ class VOCDatasetAugmented(Dataset):
     def __getitem__(self, index):
         sample = self.voc_data[index]
 
-        print(sample)
         image, target = self.transform(sample)
 
         # Convert class indices to a multi-hot matrix
