@@ -37,7 +37,6 @@ class VOCDataset(Dataset):
     def __getitem__(self, index):
         sample = self.voc_data[index]
 
-        print(sample)
         image, target = self.transform(sample)
 
         # Convert class indices to a multi-hot matrix
@@ -158,7 +157,7 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
         dataset_transforms = dict(
             train=transforms.Compose([
                 transforms.Resize((resize_size, resize_size)),
-                transforms.AutoAugment(),
+                transforms.RandAugment(),
                 transforms.ToImageTensor(),
                 transforms.ConvertImageDtype(torch.float),
                 transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE)
