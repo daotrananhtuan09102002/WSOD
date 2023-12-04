@@ -295,10 +295,9 @@ class Trainer(object):
         result = self.metrics.compute().item()
         self.metrics.reset()
 
-        if self.type_metric == 'mAP':
-            return dict(mAP_val=result)
-        
-        return dict(accuracy_val=result)
+        return {
+            self.args.type_metric + f'_{split}': result,
+        }
     
     @torch.no_grad()
     def evaluate(self, split='val'):
@@ -328,7 +327,7 @@ class Trainer(object):
 
             # Eval localization
             if self.args.use_otsu:
-                preds = get_prediction(y_pred['cams'], None, (self.args.resize_size, self.args.resize_size))
+                preds = get_prediction(y_pred['cams'], None, (self.args.resize_size, self.args.resize_size), self.args.gaussian_ksize)
                 process_batch(preds, cm_list, x, y, None)
             else:
                 for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
@@ -355,10 +354,10 @@ class Trainer(object):
         if not self.args.use_otsu and (self.args.plot_info or self.args.additional_info_path is not None):
             plot_localization_report(precision, recall, f1, num_cam_thresholds, self.args.additional_info_path, self.args.plot_info)
 
-        if self.type_metric == 'mAP':
-            return dict(mAP_val=result, mean_average_f1=f1.mean())
-          
-        return dict(accuracy_val=result, mean_average_f1=f1.mean())
+        return {
+            self.args.type_metric + f'_{split}': result,
+            'mean_average_f1' + f'_{split}': f1.mean()
+        }
         
     @torch.no_grad()
     def evaluate_ema_model(self, split='val'):
@@ -376,7 +375,6 @@ class Trainer(object):
         result = self.metrics.compute().item()
         self.metrics.reset()
 
-        if self.type_metric == 'mAP':
-            return dict(mAP_val_ema=result)
-
-        return dict(accuracy_val_ema=result)
+        return {
+            self.args.type_metric + f'_{split}_ema': result,
+        }

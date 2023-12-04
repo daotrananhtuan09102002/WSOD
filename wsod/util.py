@@ -41,7 +41,7 @@ def initialize_weights(modules, init_mode):
             nn.init.normal_(m.weight, 0, 0.01)
             nn.init.constant_(m.bias, 0)
 
-def get_prediction(batch_cam, cam_threshold, image_size=(224, 224)):
+def get_prediction(batch_cam, cam_threshold, image_size=(224, 224), gaussian_ksize=1):
     """
     Args:
         batch_cam: list of cam dict per image with class index as key and cam as value
@@ -60,6 +60,8 @@ def get_prediction(batch_cam, cam_threshold, image_size=(224, 224)):
 
             if cam_threshold is None:
                 cam = cv2.normalize(cam, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX).astype(np.uint8)
+                cam = cv2.GaussianBlur(cam, (gaussian_ksize, gaussian_ksize), 0)
+
                 _, thr_gray_heatmap = cv2.threshold(
                     src=cam,
                     thresh=0,
@@ -183,7 +185,7 @@ def plot_localization_report(precision, recall, f1, num_cam_thresholds, path=Non
     plt.tight_layout()
     
     if path is not None:
-        plt.savefig(path + f'/additional_info.png')
+        plt.savefig(path + '/additional_info.png')
     
     if show:
         plt.show()

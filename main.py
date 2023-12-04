@@ -43,6 +43,7 @@ def main():
     
     # Method arguments
     parser.add_argument('--use_otsu', action='store_true', help='Use Otsu thresholding to get bounding box')
+    parser.add_argument('--gaussian_ksize', type=int, default=1, help='Gaussian kernel size for gaussian blur before Otsu thresholding')
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
 
     # Model arguments
