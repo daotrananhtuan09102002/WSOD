@@ -96,6 +96,7 @@ def main():
     if args.type_loss == 'APL':
         print("Using Taylor expansion:", args.Taylor_expansion)
     print("Using augmentation:", args.use_data_augmentation)
+    print("Using large feature map:", args.large_feature_map)
     print("Start training...")
 
     for epoch in range(args.num_epoch):
