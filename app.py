@@ -117,9 +117,9 @@ if __name__ == "__main__":
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
         ])
 
-        st.write(classes)
         x = img
-        y = classes
+        y = [class_ids.index(c) for c in classes]
+        st.write(classes)
         inference_ds = DataLoader(
             NetDataset(
                 [x],[y],
