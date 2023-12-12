@@ -102,8 +102,9 @@ if __name__ == "__main__":
     parser.add_argument('--large_feature_map', action='store_true', help='Use large feature map')
     parser.add_argument('--drop_threshold', type=float, default=0.8, help='Drop threshold')
     parser.add_argument('--drop_prob', type=float, default=0.25, help='Drop probability')
+    parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
 
-    args = parser.parse_args()
+    args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC/vgg_drop_APL_checkpoint.pth.tar'.split())
 
     tf = transforms.Compose([
         transforms.Resize((args.resize_size, args.resize_size)),
