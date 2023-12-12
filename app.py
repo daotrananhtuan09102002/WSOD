@@ -81,7 +81,8 @@ def upload_image(img_file):
         # Manipulate cropped image at will
         st.header("Preview query image")
         st.image(img, use_column_width=True)
-    return img
+        return img
+    return None
 
 
 if __name__ == "__main__":
