@@ -77,9 +77,6 @@ def upload_image(img_file):
     if img_file:
         img = Image.open(img_file)
         st.header("Uploaded image")
-
-        # Manipulate cropped image at will
-        st.header("Preview query image")
         st.image(img, use_column_width=True)
         return img
     return None
