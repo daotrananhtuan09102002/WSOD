@@ -98,8 +98,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Image Retrieval')
     parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
-    parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
-    parser.add_argument('--architecture_type', type=str, default='cam', help='Model architecture type')
+    parser.add_argument('--architecture', type=str, default='vgg16', help='Model architecture')
+    parser.add_argument('--architecture_type', type=str, default='drop', help='Model architecture type')
     parser.add_argument('--pretrained', type=bool, default=True, help='Use pre-trained weights')
     parser.add_argument('--large_feature_map', action='store_true', help='Use large feature map')
     parser.add_argument('--drop_threshold', type=float, default=0.8, help='Drop threshold')
