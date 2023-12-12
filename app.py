@@ -94,6 +94,7 @@ if __name__ == "__main__":
     classes = st.sidebar.multiselect("Select classes", class_ids, default=None)
 
     img = upload_image(img_file)
+    button = st.sidebar.button('Detect')
 
     parser = argparse.ArgumentParser(description='Image Retrieval')
     parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
