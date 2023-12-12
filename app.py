@@ -107,8 +107,21 @@ if __name__ == "__main__":
         parser.add_argument('--drop_prob', type=float, default=0.25, help='Drop probability')
         parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
         parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
-
-        args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC/vgg_drop_APL_checkpoint.pth.tar'.split())
+        
+        if type_model == "ResNet50":
+            args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC/resnet_drop_APL_checkpoint.pth.tar \
+                                     --architecture resnet50 \
+                                    --architecture_type drop \
+                                    --drop_threshold 0.8 \
+                                    --drop_prob 0.25 \
+                                     --large_feature_map \
+                                     '.split())
+        else:
+            args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC/vgg_drop_APL_checkpoint.pth.tar \
+                                     --architecture vgg16 \
+                                     --architecture_type drop \
+                                     --drop_threshold 0.8 \
+                                     --drop_prob 0.5'.split())
 
         tf = transforms.Compose([
             transforms.Resize((args.resize_size, args.resize_size)),
