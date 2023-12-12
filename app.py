@@ -119,7 +119,6 @@ if __name__ == "__main__":
 
         x = img
         y = [class_ids.index(c) for c in classes]
-        st.write(classes)
         inference_ds = DataLoader(
             NetDataset(
                 [x],[y],
