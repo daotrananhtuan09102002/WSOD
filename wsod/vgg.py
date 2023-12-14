@@ -88,7 +88,7 @@ class VggDrop(nn.Module):
         self.sigmoid = nn.Sigmoid()
         initialize_weights(self.modules(), init_mode='he')
 
-    def forward(self, x, labels=None, return_cam=False):
+    def forward(self, x, labels=None, return_cam=False, use_ccam=False):
         _unerased_x = self.features[0](x)
         unerased_x = self.features[2](_unerased_x)
 
@@ -111,6 +111,30 @@ class VggDrop(nn.Module):
             return {'logits': logits, 'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
 
         probs = self.sigmoid(logits)
+
+        if use_ccam:
+            cams = []
+            cams_reverse = []
+            feature_map = unerased_x.detach().clone()
+
+            for label, feature in zip(labels, feature_map):
+                cam_per_image = dict()
+                cam_reverse_per_image = dict()
+                for nonzeros in label.nonzero():
+                    i = nonzeros.item()
+                    
+                    # get index of reversed class by using lowest logits
+                    reversed_i = torch.argmin(logits[0]).item()
+
+                    cam_weights = self.fc.weight[i]
+                    cam_reverse_weights = self.fc.weight[reversed_i]
+
+                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+                    cam_reverse_per_image[reversed_i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
+
+                cams.append(cam_per_image)
+                cams_reverse.append(cam_reverse_per_image)
+            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse}
 
         if return_cam:
             cams = []
