@@ -13,6 +13,7 @@ from .method.drop import AttentiveDrop
 from .util import remove_layer
 from .util import replace_layer
 from .util import initialize_weights
+from .util import t2n
 
 model_urls = {
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
@@ -215,12 +216,12 @@ class ResNetDrop(ResNetCam):
                     cam_reverse_weights = self.fc.weight[i]
                     cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
 
-                cam_reverse_sum = np.array([cam.detach().cpu().numpy().astype(np.float32) for cam in cam_reverse_per_image.values()]).sum(0)
+                cam_reverse_sum = np.array([t2n(cam) for cam in cam_reverse_per_image.values()]).sum(0)
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
                     cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
-                    ccams_per_image[i] = cam_per_image[i] - cam_reverse_sum
+                    ccams_per_image[i] = t2n(cam_per_image[i]) - cam_reverse_sum
                     
 
                 cams.append(cam_per_image)

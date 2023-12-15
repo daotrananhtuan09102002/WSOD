@@ -41,6 +41,10 @@ def initialize_weights(modules, init_mode):
             nn.init.normal_(m.weight, 0, 0.01)
             nn.init.constant_(m.bias, 0)
 
+def t2n(t):
+    return t.detach().cpu().numpy().astype(np.float32)
+
+
 def get_prediction(batch_cam, cam_threshold, image_size=(224, 224), gaussian_ksize=1):
     """
     Args:
