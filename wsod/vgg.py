@@ -46,7 +46,49 @@ class VggCam(nn.Module):
         self.sigmoid = nn.Sigmoid()
         initialize_weights(self.modules(), init_mode='he')
 
-    def forward(self, x, labels=None, return_cam=False):
+    @torch.no_grad()
+    def _compute_cam(self, features, labels, reversed_cams=None):
+        cams = []
+
+        for img_idx, (label, feature) in zip(labels, features):
+            cam_per_image = dict()
+
+            for nonzeros in label.nonzero():
+                i = nonzeros.item()
+                cam_weights = self.fc.weight[i]
+                cam = (cam_weights[:, None,  None] * feature).mean(0, keepdim=False)
+
+                if reversed_cams is not None:
+                    cam = cam - reversed_cams[img_idx]
+                    
+                cam_per_image[i] = cam
+
+            cams.append(cam_per_image)
+        
+        return cams
+    
+    @torch.no_grad()
+    def _compute_ccam(self, features, logits, bottom_k):
+        reversed_cams = []
+
+        for logit, feature in zip(logits, features):
+            reversed_cam_per_image = []
+
+            # get n-th lowest logits
+            reversed_i = torch.argsort(logit)[:bottom_k]
+
+            for i in reversed_i:
+                cam_reverse_weights = self.fc.weight[i]
+                reversed_cam_per_image.append((cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False))
+
+            reversed_cam_per_image = torch.stack(reversed_cam_per_image).sum(0)
+
+            reversed_cams.append(reversed_cam_per_image)
+        
+        return reversed_cams
+
+
+    def forward(self, x, labels=None, return_cam=False, use_ccam=None):
         x = self.features(x)
         x = self.conv6(x)
         x = self.relu(x)
@@ -59,21 +101,19 @@ class VggCam(nn.Module):
 
         probs = self.sigmoid(logits)
 
+        result = {'probs': probs}
+
         if return_cam:
-            cams = []
-            feature_map = x.detach().clone()
+            reversed_cams = None
+            if use_ccam is not None:
+                reversed_cams = self._compute_ccam(x.detach().clone(), logits, use_ccam)
+                result['reversed_cams'] = reversed_cams
 
-            for label, feature in zip(labels, feature_map):
-                cam_per_image = dict()
-                for nonzeros in label.nonzero():
-                    i = nonzeros.item()
-                    cam_weights = self.fc.weight[i]
-                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+            cams = self._compute_cam(x.detach().clone(), labels, reversed_cams)        
+            result['cams'] = cams
 
-                cams.append(cam_per_image)
-            return {'probs': probs, 'cams': cams}
         
-        return {'probs': probs}
+        return result
 
 
 class VggDrop(nn.Module):
@@ -87,6 +127,47 @@ class VggDrop(nn.Module):
         self.fc = nn.Linear(1024, num_classes)
         self.sigmoid = nn.Sigmoid()
         initialize_weights(self.modules(), init_mode='he')
+
+    @torch.no_grad()
+    def _compute_cam(self, features, labels, reversed_cams=None):
+        cams = []
+
+        for img_idx, (label, feature) in zip(labels, features):
+            cam_per_image = dict()
+
+            for nonzeros in label.nonzero():
+                i = nonzeros.item()
+                cam_weights = self.fc.weight[i]
+                cam = (cam_weights[:, None,  None] * feature).mean(0, keepdim=False)
+
+                if reversed_cams is not None:
+                    cam = cam - reversed_cams[img_idx]
+
+                cam_per_image[i] = cam
+
+            cams.append(cam_per_image)
+        
+        return cams
+    
+    @torch.no_grad()
+    def _compute_ccam(self, features, logits, bottom_k):
+        reversed_cams = []
+
+        for logit, feature in zip(logits, features):
+            reversed_cam_per_image = []
+
+            # get n-th lowest logits
+            reversed_i = torch.argsort(logit)[:bottom_k]
+
+            for i in reversed_i:
+                cam_reverse_weights = self.fc.weight[i]
+                reversed_cam_per_image.append((cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False))
+
+            reversed_cam_per_image = torch.stack(reversed_cam_per_image).sum(0)
+
+            reversed_cams.append(reversed_cam_per_image)
+        
+        return reversed_cams
 
     def forward(self, x, labels=None, return_cam=False, use_ccam=None):
         _unerased_x = self.features[0](x)
@@ -112,47 +193,19 @@ class VggDrop(nn.Module):
 
         probs = self.sigmoid(logits)
 
-        if use_ccam is not None:
-            cams = []
-            cams_reverse = []
-            feature_map = unerased_x.detach().clone()
-
-            for label, feature in zip(labels, feature_map):
-                cam_per_image = dict()
-                cam_reverse_per_image = dict()
-
-                # get n-th lowest logits
-                reversed_i = torch.argsort(logits[0])[:use_ccam]
-
-                for i in reversed_i:
-                    cam_reverse_weights = self.fc.weight[i]
-                    cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
-
-
-                for nonzeros in label.nonzero():
-                    i = nonzeros.item()
-                    cam_weights = self.fc.weight[i]
-                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
-                    
-                cams.append(cam_per_image)
-                cams_reverse.append(cam_reverse_per_image)
-            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse}
+        result = {'probs': probs}
 
         if return_cam:
-            cams = []
-            feature_map = unerased_x.detach().clone()
+            reversed_cams = None
+            if use_ccam is not None:
+                reversed_cams = self._compute_ccam(unerased_x.detach().clone(), logits, use_ccam)
+                result['reversed_cams'] = reversed_cams
 
-            for label, feature in zip(labels, feature_map):
-                cam_per_image = dict()
-                for nonzeros in label.nonzero():
-                    i = nonzeros.item()
-                    cam_weights = self.fc.weight[i]
-                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+            cams = self._compute_cam(unerased_x.detach().clone(), labels, reversed_cams)        
+            result['cams'] = cams
 
-                cams.append(cam_per_image)
-            return {'probs': probs, 'cams': cams}
         
-        return {'probs': probs}
+        return result
 
 
 def adjust_pretrained_model(pretrained_model, current_model):

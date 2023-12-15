@@ -316,11 +316,12 @@ class Trainer(object):
               for iou_thres in self.args.iou_thresholds
         ]
 
+        bottom_k = self.args.bottom_k   
 
         for batch_idx, (x, y) in enumerate(tqdm(loader)):
             x = x.cuda()
 
-            y_pred = self.model_multi(x, return_cam=True, labels=y['labels'])
+            y_pred = self.model_multi(x, return_cam=True, labels=y['labels'], use_ccam=bottom_k)
 
             # Eval classification
             self.metrics.update(y_pred['probs'], y['labels'])
