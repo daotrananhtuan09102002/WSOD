@@ -168,7 +168,7 @@ class ResNetDrop(ResNetCam):
 
         initialize_weights(self.modules(), init_mode='xavier')
 
-    def forward(self, x, labels=None, return_cam=False):
+    def forward(self, x, labels=None, return_cam=False, use_ccam=None):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -195,6 +195,33 @@ class ResNetDrop(ResNetCam):
             return {'logits': logits, 'feature': unerased_x, 'feature_erased': erased_x, 'sim': sim}
 
         probs = self.sigmoid(logits)
+
+        if use_ccam is not None:
+            cams = []
+            cams_reverse = []
+            feature_map = unerased_x.detach().clone()
+
+            for label, feature in zip(labels, feature_map):
+                cam_per_image = dict()
+                cam_reverse_per_image = dict()
+
+                # get n-th lowest logits
+                reversed_i = torch.argsort(logits[0])[:use_ccam]
+
+                for i in reversed_i:
+                    cam_reverse_weights = self.fc.weight[i]
+                    cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
+
+
+                for nonzeros in label.nonzero():
+                    i = nonzeros.item()
+                    cam_weights = self.fc.weight[i]
+                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+                    
+                cams.append(cam_per_image)
+                cams_reverse.append(cam_reverse_per_image)
+            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse}
+        
 
         if return_cam:
             cams = []
