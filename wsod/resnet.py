@@ -215,7 +215,7 @@ class ResNetDrop(ResNetCam):
                     cam_reverse_weights = self.fc.weight[i]
                     cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
 
-                cam_reverse_sum = np.array([cam.cpu() for cam in cam_reverse_per_image.values()]).sum(0)
+                cam_reverse_sum = np.array([cam.detach().cpu().numpy().astype(np.float32) for cam in cam_reverse_per_image.values()]).sum(0)
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
