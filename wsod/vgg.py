@@ -122,13 +122,13 @@ class VggDrop(nn.Module):
                 cam_reverse_per_image = dict()
 
                 # get n-th lowest logits
-                reversed_i = torch.argsort(logits[0])[use_ccam].item()
+                reversed_i = torch.argsort(logits[0])[:use_ccam].item()
 
                 for i in range(reversed_i):
                     cam_reverse_weights = self.fc.weight[i]
                     cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
 
-                
+
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
