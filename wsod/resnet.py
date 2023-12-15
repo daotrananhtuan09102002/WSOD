@@ -6,6 +6,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 from torch.utils.model_zoo import load_url
 
 from .method.drop import AttentiveDrop
@@ -199,11 +200,13 @@ class ResNetDrop(ResNetCam):
         if use_ccam is not None:
             cams = []
             cams_reverse = []
+            ccams = []
             feature_map = unerased_x.detach().clone()
 
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
                 cam_reverse_per_image = dict()
+                ccams_per_image = dict()
 
                 # get n-th lowest logits
                 reversed_i = torch.argsort(logits[0])[:use_ccam]
@@ -212,15 +215,19 @@ class ResNetDrop(ResNetCam):
                     cam_reverse_weights = self.fc.weight[i]
                     cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
 
-
+                cam_reverse_sum = np.array([cam.cpu().numpy() for cam in cam_reverse_per_image.values()]).sum(0)
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
                     cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+                    ccams_per_image[i] = cam_per_image[i] - cam_reverse_sum
                     
+
                 cams.append(cam_per_image)
                 cams_reverse.append(cam_reverse_per_image)
-            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse}
+                ccams.append(ccams_per_image)
+
+            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse, 'ccams': ccams}
         
 
         if return_cam:
