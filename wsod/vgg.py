@@ -50,7 +50,7 @@ class VggCam(nn.Module):
     def _compute_cam(self, features, labels, reversed_cams=None):
         cams = []
 
-        for img_idx, (label, feature) in zip(labels, features):
+        for img_idx, (label, feature) in enumerate(zip(labels, features)):
             cam_per_image = dict()
 
             for nonzeros in label.nonzero():
@@ -132,7 +132,7 @@ class VggDrop(nn.Module):
     def _compute_cam(self, features, labels, reversed_cams=None):
         cams = []
 
-        for img_idx, (label, feature) in zip(labels, features):
+        for img_idx, (label, feature) in enumerate(zip(labels, features)):
             cam_per_image = dict()
 
             for nonzeros in label.nonzero():
