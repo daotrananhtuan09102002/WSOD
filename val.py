@@ -176,12 +176,11 @@ def main():
             transforms.Normalize(mean=_IMAGE_MEAN_VALUE, std=_IMAGE_STD_VALUE)
         ])
 
-    split = args.split if args.split in ('train', 'val', 'test') else 'val'
     dataloader = DataLoader(
         VOCDataset(
             root=args.data_roots,
             year='2007',
-            image_set=split,
+            image_set=args.split,
             transform=tf,
         ),
         batch_size=args.batch_size,
