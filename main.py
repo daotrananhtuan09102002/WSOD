@@ -89,14 +89,16 @@ def main():
             split='train',
             batch_size=args.batch_size, 
             resize_size=args.resize_size, 
-            augment=args.use_data_augmentation
+            augment=args.use_data_augmentation,
+            normalize=args.normalize
         ),
         'val': get_data_loader(
             data_roots=args.data_roots, 
             split='val',
             batch_size=args.batch_size, 
             resize_size=args.resize_size, 
-            augment=False
+            augment=False,
+            normalize=args.normalize
         ),
     }
 

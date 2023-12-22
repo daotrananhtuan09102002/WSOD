@@ -73,15 +73,20 @@ def evaluate(model, dataloader, args):
         for iou_thres in args.iou_thresholds
     ]
 
-    if args.type_metric == 'mAP':
+    if args.classification_metric == 'mAP':
         metric = metrics.MultilabelAUPRC(num_labels=_NUM_CLASSES_MAPPING[args.dataset_name])
-    elif args.type_metric == 'acc':
+    elif args.classification_metric == 'acc':
         metric = metrics.MultilabelAccuracy()
 
     for batch_idx, (x, y) in enumerate(tqdm(dataloader)):
         x = x.cuda()
 
-        y_pred = model(x, return_cam=True, labels=y['labels'])
+        if args.localization_metric == 'gt':
+            labels = y['labels']
+        else: # args.localization_metric == 'pred'
+            labels = None
+
+        y_pred = model(x, return_cam=True, labels=labels)
 
         # Eval classification
         metric.update(y_pred['probs'], y['labels'])
@@ -116,7 +121,7 @@ def evaluate(model, dataloader, args):
         plot_localization_report(precision, recall, f1, num_cam_thresholds, args.additional_info_path, args.plot_info)
 
     return {
-        args.type_metric + f'_{args.split}': result,
+        args.classification_metric + f'_{args.split}': result,
         'mean_average_f1' + f'_{args.split}': f1.mean()
     }
 
@@ -128,22 +133,23 @@ def main():
     parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
-    parser.add_argument('--split', default='val', help='train, val, test')
+    parser.add_argument('--split', default='val', choices=['train', 'val', 'test'], help='Split to evaluate')
+    parser.add_argument('--normalize', action='store_true', help='Whether to normalize images using ImageNet mean and std')
 
-    # Trainer arguments
+    # Misc arguments
     parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
-    parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every')
     parser.add_argument('--print_report', action='store_true', help='Print localization report per class')
     parser.add_argument('--additional_info_path', type=str, default=None, help='Path to save additional info plot')
     parser.add_argument('--plot_info', action='store_true', help='Plot additional info')
-    parser.add_argument('--eval_classification_only', action='store_true', help='Evaluate classification only')
     
     # Method arguments
     parser.add_argument('--use_otsu', action='store_true', help='Use Otsu thresholding to get bounding box')
     parser.add_argument('--gaussian_ksize', type=int, default=1, help='Gaussian kernel size for gaussian blur before Otsu thresholding')
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
+    parser.add_argument('--classification_metric', type=str, default='acc', choices=['acc', 'mAP'], help='Type of classification metric')
+    parser.add_argument('--localization_metric', type=str, default='pred', choices=['pred', 'gt'], help='Whether to use prediction or ground truth labels for localization metric')
 
     # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
@@ -152,7 +158,6 @@ def main():
     parser.add_argument('--large_feature_map', action='store_true', help='Use large feature map')
     parser.add_argument('--drop_threshold', type=float, default=0.8, help='Drop threshold')
     parser.add_argument('--drop_prob', type=float, default=0.25, help='Drop probability')
-    parser.add_argument('--type_metric', type=str, default='acc', help='Type metric')
 
     args = parser.parse_args()
 
@@ -163,15 +168,19 @@ def main():
         transforms.Resize((args.resize_size, args.resize_size)),
         transforms.ToImage(),
         transforms.ToDtype(torch.float32, scale=True),
-        transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
     ])
 
-    split = args.split if args.split in ('train', 'val', 'test') else 'val'
+    if args.normalize:
+        tf = transforms.Compose([
+            tf,
+            transforms.Normalize(mean=_IMAGE_MEAN_VALUE, std=_IMAGE_STD_VALUE)
+        ])
+
     dataloader = DataLoader(
         VOCDataset(
             root=args.data_roots,
             year='2007',
-            image_set=split,
+            image_set=args.split,
             transform=tf,
         ),
         batch_size=args.batch_size,

@@ -109,6 +109,8 @@ class VggCam(nn.Module):
                 reversed_cams = self._compute_ccam(x.detach().clone(), logits, use_ccam)
                 result['reversed_cams'] = reversed_cams
 
+            if labels is None:
+                labels = torch.round(probs)
             cams = self._compute_cam(x.detach().clone(), labels, reversed_cams)        
             result['cams'] = cams
 
@@ -200,6 +202,9 @@ class VggDrop(nn.Module):
             if use_ccam is not None:
                 reversed_cams = self._compute_ccam(unerased_x.detach().clone(), logits, use_ccam)
                 result['reversed_cams'] = reversed_cams
+
+            if labels is None:
+                labels = torch.round(probs)
 
             cams = self._compute_cam(unerased_x.detach().clone(), labels, reversed_cams)        
             result['cams'] = cams

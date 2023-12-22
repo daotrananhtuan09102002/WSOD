@@ -156,6 +156,9 @@ class ResNetCam(nn.Module):
                 reversed_cams = self._compute_ccam(x.detach().clone(), logits, use_ccam)
                 result['reversed_cams'] = reversed_cams
 
+            if labels is None:
+                labels = torch.round(probs)
+                
             cams = self._compute_cam(x.detach().clone(), labels, reversed_cams)
             result['cams'] = cams
 
@@ -240,15 +243,20 @@ class ResNetDrop(ResNetCam):
         result = {'probs': probs}
 
         if return_cam:
-            reversed_cams = None
-            if use_ccam is not None:
-                reversed_cams = self._compute_ccam(unerased_x.detach().clone(), logits, use_ccam)
-                result['reversed_cams'] = reversed_cams
+            cams = []
+            feature_map = unerased_x.detach().clone()
 
-            cams = self._compute_cam(unerased_x.detach().clone(), labels, reversed_cams)
-            result['cams'] = cams
+            for label, feature in zip(labels, feature_map):
+                cam_per_image = dict()
+                for nonzeros in label.nonzero():
+                    i = nonzeros.item()
+                    cam_weights = self.fc.weight[i]
+                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
 
-        return result
+                cams.append(cam_per_image)
+            return {'probs': probs, 'cams': cams}
+        
+        return {'probs': probs}
         
 def get_downsampling_layer(inplanes, block, planes, stride):
     outplanes = planes * block.expansion
