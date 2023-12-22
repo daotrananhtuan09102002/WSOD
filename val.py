@@ -129,6 +129,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
     parser.add_argument('--split', default='val', help='train, val, test')
+    parser.add_argument('--normalize', action='store_true', help='Whether to normalize images using ImageNet mean and std')
 
     # Trainer arguments
     parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
@@ -163,8 +164,13 @@ def main():
         transforms.Resize((args.resize_size, args.resize_size)),
         transforms.ToImage(),
         transforms.ToDtype(torch.float32, scale=True),
-        transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
     ])
+
+    if args.normalize:
+        tf = transforms.Compose([
+            tf,
+            transforms.Normalize(mean=_IMAGE_MEAN_VALUE, std=_IMAGE_STD_VALUE)
+        ])
 
     split = args.split if args.split in ('train', 'val', 'test') else 'val'
     dataloader = DataLoader(
