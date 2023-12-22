@@ -1,5 +1,3 @@
-import wsod
-import wsod.method
 import os
 import torch
 import torch.nn as nn
@@ -238,7 +236,7 @@ class Trainer(object):
             print("Check {} loaded.".format(checkpoint_path))
 
     def save_ema_model(self):
-        checkpoint_path = os.path.join(self.args.log_dir, f'ema.pth.tar')
+        checkpoint_path = os.path.join(self.args.log_dir, 'ema.pth.tar')
         torch.save({'state_dict': self.model_ema.module.state_dict()}, checkpoint_path)
 
 

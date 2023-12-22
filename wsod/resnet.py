@@ -6,14 +6,12 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 from torch.utils.model_zoo import load_url
 
 from .method.drop import AttentiveDrop
 from .util import remove_layer
 from .util import replace_layer
 from .util import initialize_weights
-from .util import t2n
 
 model_urls = {
     'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
@@ -243,18 +241,16 @@ class ResNetDrop(ResNetCam):
         result = {'probs': probs}
 
         if return_cam:
-            cams = []
-            feature_map = unerased_x.detach().clone()
+            reversed_cams = None
+            if use_ccam is not None:
+                reversed_cams = self._compute_ccam(x.detach().clone(), logits, use_ccam)
+                result['reversed_cams'] = reversed_cams
 
-            for label, feature in zip(labels, feature_map):
-                cam_per_image = dict()
-                for nonzeros in label.nonzero():
-                    i = nonzeros.item()
-                    cam_weights = self.fc.weight[i]
-                    cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
-
-                cams.append(cam_per_image)
-            return {'probs': probs, 'cams': cams}
+            if labels is None:
+                labels = torch.round(probs)
+                
+            cams = self._compute_cam(x.detach().clone(), labels, reversed_cams)
+            result['cams'] = cams
         
         return {'probs': probs}
         
