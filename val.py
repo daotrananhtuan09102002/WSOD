@@ -128,14 +128,13 @@ def main():
     parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
-    parser.add_argument('--split', default='val', help='train, val, test')
+    parser.add_argument('--split', default='val', help='Split to evaluate (train, val, test)')
     parser.add_argument('--normalize', action='store_true', help='Whether to normalize images using ImageNet mean and std')
 
     # Trainer arguments
     parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
-    parser.add_argument('--eval_every', type=int, default=5, help='Evaluate every')
     parser.add_argument('--print_report', action='store_true', help='Print localization report per class')
     parser.add_argument('--additional_info_path', type=str, default=None, help='Path to save additional info plot')
     parser.add_argument('--plot_info', action='store_true', help='Plot additional info')
