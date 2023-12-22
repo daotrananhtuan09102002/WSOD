@@ -139,7 +139,6 @@ def main():
     parser.add_argument('--print_report', action='store_true', help='Print localization report per class')
     parser.add_argument('--additional_info_path', type=str, default=None, help='Path to save additional info plot')
     parser.add_argument('--plot_info', action='store_true', help='Plot additional info')
-    parser.add_argument('--eval_classification_only', action='store_true', help='Evaluate classification only')
     
     # Method arguments
     parser.add_argument('--use_otsu', action='store_true', help='Use Otsu thresholding to get bounding box')
