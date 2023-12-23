@@ -88,7 +88,7 @@ class VggCam(nn.Module):
         return reversed_cams
 
 
-    def forward(self, x, labels=None, return_cam=False, use_ccam=None):
+    def forward(self, x, labels=None, return_cam=False, bottom_k=None):
         x = self.features(x)
         x = self.conv6(x)
         x = self.relu(x)
@@ -105,8 +105,8 @@ class VggCam(nn.Module):
 
         if return_cam:
             reversed_cams = None
-            if use_ccam is not None:
-                reversed_cams = self._compute_ccam(x.detach().clone(), logits, use_ccam)
+            if bottom_k is not None:
+                reversed_cams = self._compute_ccam(x.detach().clone(), logits, bottom_k)
                 result['reversed_cams'] = reversed_cams
 
             if labels is None:
@@ -171,7 +171,7 @@ class VggDrop(nn.Module):
         
         return reversed_cams
 
-    def forward(self, x, labels=None, return_cam=False, use_ccam=None):
+    def forward(self, x, labels=None, return_cam=False, bottom_k=None, remove_duplicates=False):
         _unerased_x = self.features[0](x)
         unerased_x = self.features[2](_unerased_x)
 
@@ -199,8 +199,8 @@ class VggDrop(nn.Module):
 
         if return_cam:
             reversed_cams = None
-            if use_ccam is not None:
-                reversed_cams = self._compute_ccam(unerased_x.detach().clone(), logits, use_ccam)
+            if bottom_k is not None:
+                reversed_cams = self._compute_ccam(unerased_x.detach().clone(), logits, bottom_k)
                 result['reversed_cams'] = reversed_cams
 
             if labels is None:

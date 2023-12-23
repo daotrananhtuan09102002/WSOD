@@ -86,7 +86,7 @@ def evaluate(model, dataloader, args):
         else: # args.localization_metric == 'pred'
             labels = None
 
-        y_pred = model(x, return_cam=True, labels=labels)
+        y_pred = model(x, return_cam=True, labels=labels, bottom_k=args.bottom_k if args.use_ccam else None, remove_duplicates=args.remove_duplicates)
 
         # Eval classification
         metric.update(y_pred['probs'], y['labels'])
@@ -145,8 +145,13 @@ def main():
     parser.add_argument('--plot_info', action='store_true', help='Plot additional info')
     
     # Method arguments
+    parser.add_argument('--use_ccam', action='store_true', help='Use CCAM')
+    parser.add_argument('--bottom_k', type=int, default=None, help='Bottom k lowest logits to use for CCAM')
+    parser.add_argument('--remove_duplicates', action='store_true', help='Whether to remove top 1 logits in bottom k if possible')
+
     parser.add_argument('--use_otsu', action='store_true', help='Use Otsu thresholding to get bounding box')
     parser.add_argument('--gaussian_ksize', type=int, default=1, help='Gaussian kernel size for gaussian blur before Otsu thresholding')
+
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
     parser.add_argument('--classification_metric', type=str, default='acc', choices=['acc', 'mAP'], help='Type of classification metric')
     parser.add_argument('--localization_metric', type=str, default='pred', choices=['pred', 'gt'], help='Whether to use prediction or ground truth labels for localization metric')
