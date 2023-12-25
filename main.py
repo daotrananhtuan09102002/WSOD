@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
+    parser.add_argument('--year', type=str, default='2007', help='Year of VOC dataset')
 
     # Trainer arguments
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
@@ -80,7 +81,7 @@ def main():
 
     # Use arguments in your Trainer initialization
     set_random_seed(42)
-    voc_dataloader = get_data_loader(data_roots=args.data_roots, batch_size=args.batch_size, 
+    voc_dataloader = get_data_loader(data_roots=args.data_roots, year=args.year, batch_size=args.batch_size, 
                                      resize_size=args.resize_size, augment=args.use_data_augmentation)
 
     trainer = Trainer(

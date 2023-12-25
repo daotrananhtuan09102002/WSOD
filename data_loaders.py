@@ -114,7 +114,7 @@ class VOCDatasetAugmented(Dataset):
         
 
 
-def get_data_loader(data_roots, batch_size, resize_size, augment=False):
+def get_data_loader(data_roots, year, batch_size, resize_size, augment=False):
     if augment:
         dataset_transforms_augmented = dict(
             train=transforms.Compose([
@@ -134,7 +134,7 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
             'train': DataLoader(
                 VOCDatasetAugmented(
                     root=data_roots,
-                    year='2007',
+                    year=year,
                     image_set='train',
                     transform=dataset_transforms_augmented['train'],
                 ),
@@ -144,7 +144,7 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
             'val': DataLoader(
                 VOCDatasetAugmented(
                     root=data_roots,
-                    year='2007',
+                    year=year,
                     image_set='val',
                     transform=dataset_transforms_augmented['val'],
                 ),
@@ -171,7 +171,7 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
             'train': DataLoader(
                 VOCDataset(
                     root=data_roots,
-                    year='2007',
+                    year=year,
                     image_set='train',
                     transform=dataset_transforms['train'],
                 ),
@@ -181,7 +181,7 @@ def get_data_loader(data_roots, batch_size, resize_size, augment=False):
             'val': DataLoader(
                 VOCDataset(
                     root=data_roots,
-                    year='2007',
+                    year=year,
                     image_set='val',
                     transform=dataset_transforms['val'],
                 ),
