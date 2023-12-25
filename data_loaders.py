@@ -25,7 +25,7 @@ class VOCDataset(Dataset):
                 root=root, 
                 year=year,
                 image_set=image_set, 
-                download=False
+                download=True
         ))
         self.num_classes = num_classes
         self.transform = transform
