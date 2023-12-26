@@ -122,7 +122,21 @@ def evaluate(model, dataloader, args):
 
     return {
         args.classification_metric + f'_{args.split}': result,
-        'mean_average_f1' + f'_{args.split}': f1.mean()
+        'mean_average_f1' + f'_{args.split}': f1.mean(),
+        **{
+            f'average_f1@{iou_thres}_{args.split}': f1.mean((1, 2))[iou_thres_idx] 
+           for iou_thres_idx, iou_thres in enumerate(args.iou_thresholds)
+        },
+        'mean_average_precision' + f'_{args.split}': precision.mean(),
+        **{
+            f'average_precision@{iou_thres}_{args.split}': precision.mean((1, 2))[iou_thres_idx] 
+           for iou_thres_idx, iou_thres in enumerate(args.iou_thresholds)
+        },
+        'mean_average_recall' + f'_{args.split}': recall.mean(),
+        **{
+            f'average_recall@{iou_thres}_{args.split}': recall.mean((1, 2))[iou_thres_idx] 
+           for iou_thres_idx, iou_thres in enumerate(args.iou_thresholds)
+        },
     }
 
 def main():

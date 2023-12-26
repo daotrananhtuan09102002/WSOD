@@ -273,24 +273,23 @@ def process_batch(preds, cm_list, x, y, cam_threshold_idx=None):
         y: dict of Array[B, num_classes], labels
     """
     for img_idx in range(x.shape[0]):
-        for gt_class in torch.nonzero(y['labels'][img_idx]).flatten():
-            pred = preds[img_idx][preds[img_idx][:, 4] == gt_class]
-            gt = y['bounding_boxes'][img_idx][y['bounding_boxes'][img_idx][:, 0] == gt_class]
+        pred = preds[img_idx][preds[img_idx][:, 0] != -1]
+        gt = y['bounding_boxes'][img_idx]
 
-            npred = pred.shape[0]
+        npred = pred.shape[0]
 
-            # model has no predictions on this image
-            if npred == 0:
-                if cam_threshold_idx is not None:
-                    for cm in cm_list:
-                        cm[cam_threshold_idx].process_batch(detections=None, labels=gt)
-                else:
-                    for cm in cm_list:
-                        cm[0].process_batch(detections=None, labels=gt)
+        # model has no predictions on this image
+        if npred == 0:
+            if cam_threshold_idx is not None:
+                for cm in cm_list:
+                    cm[cam_threshold_idx].process_batch(detections=None, labels=gt)
             else:
-                if cam_threshold_idx is not None:
-                    for cm in cm_list:
-                        cm[cam_threshold_idx].process_batch(detections=pred, labels=gt)
-                else:
-                    for cm in cm_list:
-                        cm[0].process_batch(detections=pred, labels=gt)
+                for cm in cm_list:
+                    cm[0].process_batch(detections=None, labels=gt)
+        else:
+            if cam_threshold_idx is not None:
+                for cm in cm_list:
+                    cm[cam_threshold_idx].process_batch(detections=pred, labels=gt)
+            else:
+                for cm in cm_list:
+                    cm[0].process_batch(detections=pred, labels=gt)
