@@ -19,7 +19,7 @@ VGG16:
     BCE - SGD - CAM: mAP_val = 0.7495, loc_val = 0.2326
     BCE - SGD - Bridging: mAP_val = 0.7588, loc_val = 0.2344
 
-    APL - Adam - CAM: mAP_val = 0.8074, loc_val = 0.2344
+    APL - Adam - CAM: mAP_val = 0.8047, loc_val = 0.2344
     APL - Adam - Bridging: mAP_val = 0.8142, loc_val = 0.2475
 
 

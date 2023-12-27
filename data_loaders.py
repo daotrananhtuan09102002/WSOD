@@ -75,7 +75,7 @@ def collate_fn(batch):
 
     return images, {'labels': labels, 'bounding_boxes': bounding_boxes}
 
-def get_data_loader(data_roots, split, batch_size, resize_size, augment=False, normalize=False):
+def get_data_loader(data_roots, year, split, batch_size, resize_size, augment=False, normalize=False):
     tf = transforms.Compose([
         transforms.Resize((resize_size, resize_size)),
         transforms.ToImage(),
@@ -96,7 +96,7 @@ def get_data_loader(data_roots, split, batch_size, resize_size, augment=False, n
 
     dataset = VOCDataset(
         root=data_roots,
-        year='2007',
+        year=year,
         image_set=split,
         transform=tf
     )

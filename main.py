@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
     parser.add_argument('--normalize', action='store_true', help='Whether to normalize images using ImageNet mean and std')
+    parser.add_argument('--year', type=str, default='2007', help='VOC dataset year')
 
     # Trainer arguments
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
@@ -85,6 +86,7 @@ def main():
     voc_dataloader = {
         'train': get_data_loader(
             data_roots=args.data_roots, 
+            year=args.year,
             split='train',
             batch_size=args.batch_size, 
             resize_size=args.resize_size, 
@@ -93,6 +95,7 @@ def main():
         ),
         'val': get_data_loader(
             data_roots=args.data_roots, 
+            year=args.year,
             split='val',
             batch_size=args.batch_size, 
             resize_size=args.resize_size, 
