@@ -4,6 +4,8 @@ import random
 
 import numpy as np
 import torch
+import torchvision
+torchvision.disable_beta_transforms_warning()
 import torchvision.transforms.v2 as transforms
 
 from data_loaders import _IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE, VOCDataset, collate_fn
