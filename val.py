@@ -181,8 +181,8 @@ def main():
 
     tf = transforms.Compose([
         transforms.Resize((args.resize_size, args.resize_size)),
-        transforms.ToImage(),
-        transforms.ToDtype(torch.float32, scale=True),
+        transforms.ToImageTensor(),
+        transforms.ConvertImageDtype(torch.float32),
     ])
 
     if args.normalize:
