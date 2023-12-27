@@ -149,7 +149,7 @@ def main():
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
     parser.add_argument('--split', default='val', choices=['train', 'val', 'test'], help='Split to evaluate')
     parser.add_argument('--normalize', action='store_true', help='Whether to normalize images using ImageNet mean and std')
-    parser.add_argument('--year', type=str, default='2007', help='VOC dataset year')
+    parser.add_argument('--year', type=str, default='2007', choices=['2007', '2012'], help='VOC dataset year')
 
     # Misc arguments
     parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')

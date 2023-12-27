@@ -1,5 +1,5 @@
 import numpy as np
-import glob
+import os
 import torchvision
 import torch
 import torch.nn.functional as F
@@ -25,7 +25,7 @@ class VOCDataset(Dataset):
                 root=root, 
                 year=year,
                 image_set=image_set, 
-                download=not(glob.glob('./voc/*.tar'))
+                download=not(os.path.isfile(f'./voc/VOCdevkit/VOC{year}/ImageSets/Layout/{image_set}.txt'))
         ))
         self.num_classes = num_classes
         self.transform = transform
