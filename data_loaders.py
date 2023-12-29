@@ -8,6 +8,7 @@ import torchvision.transforms.v2 as transforms
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
+import os
 
 _IMAGE_MEAN_VALUE = [0.485, 0.456, 0.406]
 _IMAGE_STD_VALUE = [0.229, 0.224, 0.225]
@@ -25,7 +26,7 @@ class VOCDataset(Dataset):
                 root=root, 
                 year=year,
                 image_set=image_set, 
-                download=not(glob.glob('./voc/*.tar'))
+                download=not(os.path.isfile(f'./voc/VOCdevkit/VOC{year}/ImageSets/Layout/{image_set}.txt'))
         ))
         self.num_classes = num_classes
         self.transform = transform
