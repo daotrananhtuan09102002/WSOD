@@ -5,6 +5,10 @@ import numpy as np
 from copy import deepcopy
 
 
+def t2n(t):
+    return t.detach().cpu().numpy().astype(np.float32)
+
+
 def remove_layer(state_dict, keyword):
     keys = [key for key in state_dict.keys()]
     for key in keys:
