@@ -88,18 +88,23 @@ def evaluate(model, dataloader, args):
         else: # args.localization_metric == 'pred'
             labels = None
 
-        y_pred = model(x, return_cam=True, labels=labels)
+        str_cam = 'ccams' if args.no_ccam > 0 else 'cams'
+
+        if args.no_ccam > 0:
+            y_pred = model(x, return_cam=True, labels=labels, no_ccam=args.no_ccam)    
+        else:
+            y_pred = model(x, return_cam=True, labels=labels)
 
         # Eval classification
         metric.update(y_pred['probs'], y['labels'])
 
         # Eval localization
         if args.use_otsu:
-            preds = get_prediction(y_pred['cams'], None, (args.resize_size, args.resize_size), args.gaussian_ksize)
+            preds = get_prediction(y_pred[str_cam], None, (args.resize_size, args.resize_size), args.gaussian_ksize)
             process_batch(preds, cm_list, x, y, None)
         else:
             for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
-                preds = get_prediction(y_pred['cams'], cam_threshold, (args.resize_size, args.resize_size))
+                preds = get_prediction(y_pred[str_cam], cam_threshold, (args.resize_size, args.resize_size))
                 process_batch(preds, cm_list, x, y, cam_threshold_idx)
 
     # Classification result
@@ -167,6 +172,7 @@ def main():
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
     parser.add_argument('--classification_metric', type=str, default='acc', choices=['acc', 'mAP'], help='Type of classification metric')
     parser.add_argument('--localization_metric', type=str, default='pred', choices=['pred', 'gt'], help='Whether to use prediction or ground truth labels for localization metric')
+    parser.add_argument('--no_ccam', type=int, default=0, help='Number of CCAMs to use')
 
     # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
