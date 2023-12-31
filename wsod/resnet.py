@@ -98,7 +98,6 @@ class ResNetCam(nn.Module):
 
             for i in reversed_i:
                 cam_reverse_weights = self.fc.weight[i]
-                print(cam_reverse_weights[:,None,None].shape, feature.shape)
                 cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
 
             cam_reverse_sum_per_image = torch.stack(list(cam_reverse_per_image.values())).sum(0)
@@ -248,7 +247,7 @@ class ResNetDrop(ResNetCam):
 
         if no_ccam is not None:
             cams = []
-            cams_reverse, cams_reverse_sum = self.compute_ccam(x, logits, no_ccam)
+            cams_reverse, cams_reverse_sum = self.compute_ccam(unerased_x, logits, no_ccam)
             ccams = []
             feature_map = unerased_x.detach().clone()
 
@@ -284,7 +283,6 @@ class ResNetDrop(ResNetCam):
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
-                    print(cam_weights[:,None,None].shape, feature.shape)
                     cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
 
                 cams.append(cam_per_image)
