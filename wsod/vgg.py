@@ -46,6 +46,27 @@ class VggCam(nn.Module):
         self.sigmoid = nn.Sigmoid()
         initialize_weights(self.modules(), init_mode='he')
 
+
+    @torch.no_grad()
+    def compute_ccam(self, features, logits, no_ccam):
+        cam_reverse = []
+        cam_reverse_sum = []
+
+        for logit, feature in zip(logits, features):
+            cam_reverse_per_image = dict()
+            reversed_i = torch.argsort(logit)[:no_ccam]
+
+            for i in reversed_i:
+                cam_reverse_weights = self.fc.weight[i]
+                cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
+
+            cam_reverse_sum_per_image = torch.stack(list(cam_reverse_per_image.values())).sum(0)
+            cam_reverse_sum.append(cam_reverse_sum_per_image)
+            cam_reverse.append(cam_reverse_per_image)
+
+        return cam_reverse, cam_reverse_sum
+
+
     def forward(self, x, labels=None, return_cam=False, no_ccam=None):
         x = self.features(x)
         x = self.conv6(x)
@@ -61,32 +82,28 @@ class VggCam(nn.Module):
 
         if no_ccam is not None:
             cams = []
-            cams_reverse = []
+            cams_reverse, cams_reverse_sum = self.compute_ccam(x, logits, no_ccam)
+            ccams = []
             feature_map = x.detach().clone()
 
             if labels is None:
                 labels = torch.round(probs)
-
-            for label, feature in zip(labels, feature_map):
+                
+            # process one image at a time from batch 
+            for label, feature, cam_reverse_sum in zip(labels, feature_map, cams_reverse_sum):
                 cam_per_image = dict()
-                cam_reverse_per_image = dict()
-
-                # get n-th lowest logits
-                reversed_i = torch.argsort(logits[1])[:no_ccam]
-
-                for i in reversed_i:
-                    cam_reverse_weights = self.fc.weight[i]
-                    cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
-
+                ccam_per_image = dict()
 
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
                     cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+                    ccam_per_image[i] = cam_per_image[i] - cam_reverse_sum
                     
                 cams.append(cam_per_image)
-                cams_reverse.append(cam_reverse_per_image)
-            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse}
+                ccams.append(ccam_per_image)
+
+            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse, 'ccams': ccams}
         
         if return_cam:
             cams = []
@@ -146,31 +163,28 @@ class VggDrop(nn.Module):
 
         if no_ccam is not None:
             cams = []
-            cams_reverse = []
+            cams_reverse, cams_reverse_sum = self.compute_ccam(unerased_x, logits, no_ccam)
+            ccams = []
             feature_map = unerased_x.detach().clone()
 
             if labels is None:
                 labels = torch.round(probs)
-            for label, feature in zip(labels, feature_map):
+                
+            # process one image at a time from batch 
+            for label, feature, cam_reverse_sum in zip(labels, feature_map, cams_reverse_sum):
                 cam_per_image = dict()
-                cam_reverse_per_image = dict()
-
-                # get n-th lowest logits
-                reversed_i = torch.argsort(logits[1])[:no_ccam]
-
-                for i in reversed_i:
-                    cam_reverse_weights = self.fc.weight[i]
-                    cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
-
+                ccam_per_image = dict()
 
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
                     cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
+                    ccam_per_image[i] = cam_per_image[i] - cam_reverse_sum
                     
                 cams.append(cam_per_image)
-                cams_reverse.append(cam_reverse_per_image)
-            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse}
+                ccams.append(ccam_per_image)
+
+            return {'probs': probs, 'cams': cams, 'cams_reverse': cams_reverse, 'ccams': ccams}
 
         if return_cam:
             cams = []

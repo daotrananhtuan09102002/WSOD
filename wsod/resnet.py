@@ -145,7 +145,7 @@ class ResNetCam(nn.Module):
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
                     cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
-                    ccam_per_image[i] = t2n(cam_per_image[i]) - cam_reverse_sum
+                    ccam_per_image[i] = cam_per_image[i] - cam_reverse_sum
                     
                 cams.append(cam_per_image)
                 ccams.append(ccam_per_image)
