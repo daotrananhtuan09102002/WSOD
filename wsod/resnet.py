@@ -98,6 +98,7 @@ class ResNetCam(nn.Module):
 
             for i in reversed_i:
                 cam_reverse_weights = self.fc.weight[i]
+                print(cam_reverse_weights[:,None,None].shape, feature.shape)
                 cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
 
             cam_reverse_sum_per_image = torch.stack(list(cam_reverse_per_image.values())).sum(0)
