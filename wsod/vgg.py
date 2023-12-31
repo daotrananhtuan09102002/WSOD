@@ -64,6 +64,9 @@ class VggCam(nn.Module):
             cams_reverse = []
             feature_map = x.detach().clone()
 
+            if labels is None:
+                labels = torch.round(probs)
+
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
                 cam_reverse_per_image = dict()
@@ -88,6 +91,9 @@ class VggCam(nn.Module):
         if return_cam:
             cams = []
             feature_map = x.detach().clone()
+
+            if labels is None:
+                labels = torch.round(probs)
 
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
@@ -143,6 +149,8 @@ class VggDrop(nn.Module):
             cams_reverse = []
             feature_map = unerased_x.detach().clone()
 
+            if labels is None:
+                labels = torch.round(probs)
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
                 cam_reverse_per_image = dict()
@@ -168,6 +176,9 @@ class VggDrop(nn.Module):
             cams = []
             feature_map = unerased_x.detach().clone()
 
+            if labels is None:
+                labels = torch.round(probs)
+                
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
                 for nonzeros in label.nonzero():

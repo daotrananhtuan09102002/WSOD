@@ -113,6 +113,9 @@ class ResNetCam(nn.Module):
             ccams = []
             feature_map = x.detach().clone()
 
+            if labels is None:
+                labels = torch.round(probs)
+
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
                 cam_reverse_per_image = dict()
@@ -142,6 +145,9 @@ class ResNetCam(nn.Module):
         if return_cam:
             cams = []
             feature_map = x.detach().clone()
+
+            if labels is None:
+                labels = torch.round(probs)
 
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
@@ -236,6 +242,9 @@ class ResNetDrop(ResNetCam):
             ccams = []
             feature_map = unerased_x.detach().clone()
 
+            if labels is None:
+                labels = torch.round(probs)
+
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
                 cam_reverse_per_image = dict()
@@ -266,6 +275,9 @@ class ResNetDrop(ResNetCam):
         if return_cam:
             cams = []
             feature_map = unerased_x.detach().clone()
+
+            if labels is None:
+                labels = torch.round(probs)
 
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
