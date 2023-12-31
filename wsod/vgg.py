@@ -137,6 +137,26 @@ class VggDrop(nn.Module):
         self.sigmoid = nn.Sigmoid()
         initialize_weights(self.modules(), init_mode='he')
 
+    @torch.no_grad()
+    def compute_ccam(self, features, logits, no_ccam):
+        cam_reverse = []
+        cam_reverse_sum = []
+
+        for logit, feature in zip(logits, features):
+            cam_reverse_per_image = dict()
+            reversed_i = torch.argsort(logit)[:no_ccam]
+
+            for i in reversed_i:
+                cam_reverse_weights = self.fc.weight[i]
+                cam_reverse_per_image[i] = (cam_reverse_weights[:,None,None] * feature).mean(0, keepdim=False)
+
+            cam_reverse_sum_per_image = torch.stack(list(cam_reverse_per_image.values())).sum(0)
+            cam_reverse_sum.append(cam_reverse_sum_per_image)
+            cam_reverse.append(cam_reverse_per_image)
+
+        return cam_reverse, cam_reverse_sum
+    
+    
     def forward(self, x, labels=None, return_cam=False, no_ccam=None):
         _unerased_x = self.features[0](x)
         unerased_x = self.features[2](_unerased_x)
