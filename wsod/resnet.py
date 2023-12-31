@@ -284,6 +284,7 @@ class ResNetDrop(ResNetCam):
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
+                    print(cam_weights[:,None,None].shape, feature.shape)
                     cam_per_image[i] = (cam_weights[:,None,None] * feature).mean(0, keepdim=False)
 
                 cams.append(cam_per_image)
