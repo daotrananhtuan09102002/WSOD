@@ -104,7 +104,8 @@ class ResNetCam(nn.Module):
             cam_reverse_sum.append(cam_reverse_sum_per_image)
             cam_reverse.append(cam_reverse_per_image)
 
-        return {'cam_reverse': cam_reverse, 'cam_reverse_sum': cam_reverse_sum}
+        return cam_reverse, cam_reverse_sum
+
 
     def forward(self, x, labels=None, return_cam=False, no_ccam=None):
         x = self.conv1(x)
