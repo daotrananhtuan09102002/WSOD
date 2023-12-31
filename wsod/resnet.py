@@ -122,7 +122,7 @@ class ResNetCam(nn.Module):
                 ccams_per_image = dict()
 
                 # get n-th lowest logits
-                reversed_i = torch.argsort(logits[0])[:no_ccam]
+                reversed_i = torch.argsort(logits[1])[:no_ccam]
 
                 for i in reversed_i:
                     cam_reverse_weights = self.fc.weight[i]
@@ -251,7 +251,7 @@ class ResNetDrop(ResNetCam):
                 ccams_per_image = dict()
 
                 # get n-th lowest logits
-                reversed_i = torch.argsort(logits[0])[:no_ccam]
+                reversed_i = torch.argsort(logits[1])[:no_ccam]
 
                 for i in reversed_i:
                     cam_reverse_weights = self.fc.weight[i]
