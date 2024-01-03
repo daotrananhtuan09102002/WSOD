@@ -83,7 +83,7 @@ class ResNetCam(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         self.dropout = nn.Dropout(0.5)
-        self.sigmoid = nn.Sigmoid()
+        self.sigmoid = nn.Softmax()
 
         initialize_weights(self.modules(), init_mode='xavier')
 
