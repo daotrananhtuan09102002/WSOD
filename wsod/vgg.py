@@ -43,7 +43,7 @@ class VggCam(nn.Module):
         self.relu = nn.ReLU(inplace=False)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(1024, num_classes)
-        self.sigmoid = nn.Sigmoid()
+        self.sigmoid = nn.Softmax(dim=1)
         initialize_weights(self.modules(), init_mode='he')
 
 
@@ -134,7 +134,7 @@ class VggDrop(nn.Module):
         self.relu = nn.ReLU(inplace=False)
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(1024, num_classes)
-        self.sigmoid = nn.Sigmoid()
+        self.sigmoid = nn.Softmax(dim=1)
         initialize_weights(self.modules(), init_mode='he')
 
     @torch.no_grad()
