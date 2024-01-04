@@ -217,7 +217,7 @@ def main():
     checkpoint_path = args.checkpoint_path
     if os.path.isfile(checkpoint_path):
             checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint['state_dict'], strict=True)
+            model.load_state_dict(checkpoint['state_dict'], strict=False)
             print("Check {} loaded.".format(checkpoint_path))
     else:
         raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
