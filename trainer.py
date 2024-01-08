@@ -356,7 +356,7 @@ class Trainer(object):
 
         return {
             self.args.type_metric + f'_{split}': result,
-            'mean_average_f1' + f'_{split}': f1.mean()
+            'mean_average_f1' + f'_{split}': f1.mean(2).max(1).mean(),
         }
         
     @torch.no_grad()
