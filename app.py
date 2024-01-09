@@ -16,7 +16,7 @@ from torch.utils.data import Dataset, DataLoader
 from data_loaders import _IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE
 from wsod.util import get_prediction
 
-st.set_page_config(page_title="Image Retrieval Website", page_icon=":camera:", layout="wide")
+st.set_page_config(page_title="Object Detection", page_icon=":camera:", layout="wide")
 
 
 class_ids = [
@@ -90,6 +90,7 @@ if __name__ == "__main__":
     type_model = st.sidebar.selectbox("Type of model", ["ResNet50", "VGG16"], label_visibility="collapsed")
     st.sidebar.subheader('Step 3: Select classes to detect')
     classes = st.sidebar.multiselect("Select classes", class_ids, default=None)
+    st.sidebar.subheader('Step 4: Select cam threshold')
     cam_threshold = st.sidebar.slider("Threshold", min_value=0.0, max_value=1.0, step=0.05, value=0.4)
 
     img = upload_image(img_file)
@@ -160,7 +161,7 @@ if __name__ == "__main__":
                 orig_img = cv2.normalize(orig_img, None, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX).astype(np.uint8)
 
                 for gt_class, cam in y_pred['cams'][img_idx].items():
-                    fig, axs = plt.subplots(2, 4, figsize=(12, 6), num=1, clear=True, layout="constrained")
+                    fig, axs = plt.subplots(2, 3, figsize=(12, 6), num=1, clear=True, layout="constrained")
                     cam = cam.cpu().numpy()
 
                     # row 1 col 1: Original Image
