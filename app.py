@@ -62,12 +62,14 @@ class NetDataset(Dataset):
         image = self.transform(raw_image)
 
         # Convert class indices to a multi-hot matrix
-        label_multi_hot = F.one_hot(
-            torch.unique(torch.tensor(self.labels[index])),
-            num_classes=self.num_classes
-        ).sum(dim=0)
+        if self.labels[index] is not None:
+            label_multi_hot = F.one_hot(
+                torch.unique(torch.tensor(self.labels[index])),
+                num_classes=self.num_classes
+            ).sum(dim=0)
+            return image, label_multi_hot.float()
 
-        return image, label_multi_hot.float()
+        return image, None
 
 def load_image(image_file):
     img = Image.open(image_file)
@@ -129,7 +131,7 @@ if __name__ == "__main__":
         ])
 
         x = img
-        y = [class_ids.index(c) for c in classes]
+        y = [class_ids.index(c) for c in classes] 
         inference_ds = DataLoader(
             NetDataset(
                 [x],[y],
