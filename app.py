@@ -106,15 +106,14 @@ if __name__ == "__main__":
         parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
         
         if type_model == "ResNet50":
-            args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC/resnet_drop_APL_checkpoint.pth.tar \
+            args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC-2012/resnet_drop_APL_2012_small.pth.tar \
                                      --architecture resnet50 \
                                     --architecture_type drop \
                                     --drop_threshold 0.8 \
                                     --drop_prob 0.25 \
-                                     --large_feature_map \
-                                     '.split())
+                                    --no_ccam 1'.split())
         else:
-            args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC/vgg_drop_APL_checkpoint.pth.tar \
+            args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC-2012/vgg_cam_BCE_2012.pth.tar \
                                      --architecture vgg16 \
                                      --architecture_type drop \
                                      --drop_threshold 0.8 \
