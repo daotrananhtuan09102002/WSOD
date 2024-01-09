@@ -62,7 +62,7 @@ class NetDataset(Dataset):
         image = self.transform(raw_image)
 
         # Convert class indices to a multi-hot matrix
-        if self.labels is not None:
+        if None not in self.labels[index]:
             label_multi_hot = F.one_hot(
                 torch.unique(torch.tensor(self.labels[index])),
                 num_classes=self.num_classes
