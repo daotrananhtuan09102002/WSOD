@@ -90,7 +90,7 @@ if __name__ == "__main__":
     type_model = st.sidebar.selectbox("Type of model", ["ResNet50", "VGG16"], label_visibility="collapsed")
     st.sidebar.subheader('Step 3: Select classes to detect')
     classes = st.sidebar.multiselect("Select classes", class_ids, default=None)
-    cam_threshold = st.slider("Threshold", min_value=0.0, max_value=1.0, step=0.05, value=0.4)
+    cam_threshold = st.sidebar.slider("Threshold", min_value=0.0, max_value=1.0, step=0.05, value=0.4)
 
     img = upload_image(img_file)
     button = st.sidebar.button('Detect')
