@@ -153,7 +153,10 @@ if __name__ == "__main__":
 
         for x, y in inference_ds:
             with torch.no_grad():
-                y_pred = model(x.cuda(), labels=y, return_cam=True)
+                if y[0] == 20:
+                    y_pred = model(x.cuda(), return_cam=True)
+                else:
+                    y_pred = model(x.cuda(), labels=y, return_cam=True)
 
             for img_idx in range(x.shape[0]):
                 orig_img = x[img_idx] * torch.tensor([.229, .224, .225]).view(3, 1, 1) + torch.tensor([0.485, .456, .406]).view(3, 1, 1)
