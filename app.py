@@ -110,12 +110,11 @@ if __name__ == "__main__":
                                      --architecture resnet50 \
                                     --architecture_type drop \
                                     --drop_threshold 0.8 \
-                                    --drop_prob 0.25 \
-                                    --no_ccam 1'.split())
+                                    --drop_prob 0.25'.split())
         else:
             args = parser.parse_args('--checkpoint_path /content/drive/MyDrive/WSOD_Torch/weights_torch_VOC-2012/vgg_cam_BCE_2012.pth.tar \
                                      --architecture vgg16 \
-                                     --architecture_type drop \
+                                     --architecture_type cam \
                                      --drop_threshold 0.8 \
                                      --drop_prob 0.5'.split())
 
