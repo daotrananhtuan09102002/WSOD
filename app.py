@@ -89,7 +89,7 @@ if __name__ == "__main__":
     st.sidebar.subheader('Step 2: Select type of model to use')
     type_model = st.sidebar.selectbox("Type of model", ["ResNet50", "VGG16"], label_visibility="collapsed")
     st.sidebar.subheader('Step 3: Select classes to detect')
-    classes = st.sidebar.multiselect("Select classes", class_ids, default=None)
+    classes = st.sidebar.multiselect("Select classes", class_ids, default=None, placeholder="None")
     st.sidebar.subheader('Step 4: Select cam threshold')
     cam_threshold = st.sidebar.slider("Threshold", min_value=0.0, max_value=1.0, step=0.05, value=0.4)
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
 
         for x, y in inference_ds:
             with torch.no_grad():
-                if y[0] == 20:
+                if classes is None:
                     y_pred = model(x.cuda(), return_cam=True)
                 else:
                     y_pred = model(x.cuda(), labels=y, return_cam=True)
