@@ -40,6 +40,7 @@ class_ids = [
     "sofa",
     "train",
     "tvmonitor",
+    "None"
 ]
 class_mapping = dict(zip(range(len(class_ids)), class_ids))
 
@@ -89,6 +90,7 @@ if __name__ == "__main__":
     type_model = st.sidebar.selectbox("Type of model", ["ResNet50", "VGG16"], label_visibility="collapsed")
     st.sidebar.subheader('Step 3: Select classes to detect')
     classes = st.sidebar.multiselect("Select classes", class_ids, default=None)
+    cam_threshold = st.slider("Threshold", min_value=0.0, max_value=1.0, step=0.05, value=0.4)
 
     img = upload_image(img_file)
     button = st.sidebar.button('Detect')
@@ -147,8 +149,6 @@ if __name__ == "__main__":
             raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
 
         model.eval()
-
-        cam_threshold = 0.4
 
         for x, y in inference_ds:
             with torch.no_grad():
@@ -215,7 +215,7 @@ if __name__ == "__main__":
                     axs[1, 1].axis('off')
                     axs[1, 1].set_title('Prediction')
 
-                    ksizes = [1,7]
+                    ksizes = [7]
                     for idx, ksize in enumerate(ksizes, start=2):
                         # heatmap
                         heatmap = cv2.resize(cam, (224, 224), interpolation=cv2.INTER_CUBIC)
