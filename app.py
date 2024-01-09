@@ -131,7 +131,7 @@ if __name__ == "__main__":
         ])
 
         x = img
-        y = [class_ids.index(c) for c in classes] 
+        y = [class_ids.index(c) for c in classes] if classes is not None else None
         inference_ds = DataLoader(
             NetDataset(
                 [x],[y],
