@@ -3,21 +3,19 @@ import os
 import random
 
 import numpy as np
+import pandas as pd
 import torch
 import torchvision.transforms.v2 as transforms
 
-from data_loaders import _IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE, VOCDataset, collate_fn
 from torch.utils.data import DataLoader
 from torcheval import metrics
 from tqdm import tqdm
+from torchmetrics.detection import MeanAveragePrecision
+from pathlib import Path
 
-from wsod.metrics import ConfusionMatrix
+from data_loaders import _IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE, VOCDataset, collate_fn
 from wsod.resnet import resnet50
-from wsod.util import (
-    custom_report,
-    get_prediction,
-    plot_localization_report,
-)
+from wsod.util import get_prediction
 from wsod.vgg import vgg16
 
 BUILTIN_MODELS = {
@@ -60,124 +58,126 @@ def get_model(args):
             drop_prob=args.drop_prob
         ).cuda()
 
-def process_batch(preds, cm_list, x, y, cam_threshold_idx=None):
-    """ Process batch of predictions
+def process_prediction(preds):
+    return [
+        {
+            'boxes': image_pred[:, :4],
+            'scores': image_pred[:, 5],
+            'labels': image_pred[:, 4].int()
+        } if (image_pred != -1).any() else
+        {
+            'boxes': torch.tensor([]),
+            'scores': torch.tensor([]),
+            'labels': torch.tensor([])
+        }
+        for image_pred in preds
+    ]
 
-    Args:
-        preds: Array[B, None, 5], x1, y1, x2, y2, class
-        cm_list: list of confusion matrix at different iou thresholds
-        x: Array[B, 3, H, W], images
-        y: dict of Array[B, num_classes], labels
-    """
-    for img_idx in range(x.shape[0]):
-        pred = preds[img_idx][preds[img_idx][:, 0] != -1]
-        gt = y['bounding_boxes'][img_idx]
+def process_target(y):
+    return [
+        {
+            'boxes': image_gt[:, 1:],
+            'labels': image_gt[:, 0].int(),
+        }
+        for image_gt in y['bounding_boxes']
+    ]
 
-        npred = pred.shape[0]
-
-        # model has no predictions on this image
-        if npred == 0:
-            if cam_threshold_idx is not None:
-                for cm in cm_list:
-                    cm[cam_threshold_idx].process_batch(detections=None, labels=gt)
-            else:
-                for cm in cm_list:
-                    cm[0].process_batch(detections=None, labels=gt)
+def get_value_from_tensor(value):
+    if isinstance(value, torch.Tensor):
+        if value.numel() == 1:
+            return value.item()
         else:
-            if cam_threshold_idx is not None:
-                for cm in cm_list:
-                    cm[cam_threshold_idx].process_batch(detections=pred, labels=gt)
-            else:
-                for cm in cm_list:
-                    cm[0].process_batch(detections=pred, labels=gt)
+            return value.numpy()
+    else:
+        return value
+    
+def to_csv(args, result):
+    args_dict = vars(args)
+    
+    for k in ['dataset_name', 'batch_size', 'data_roots', 'log_dir', 'class_metrics', 'drop_prob', 'drop_threshold', 'pretrained']:
+        args_dict.pop(k)
+
+    args_dict['checkpoint_path'] = Path(args_dict['checkpoint_path']).stem
+    
+    res = {**args_dict, **result}
+
+    (pd.DataFrame.from_dict(res, orient='index')
+                .T
+                .map(get_value_from_tensor)
+                .to_csv(
+                    'temp.csv',
+                    index=False, 
+                    header=not os.path.exists('temp.csv'), 
+                    mode='a'
+                )
+    )
 
 @torch.no_grad()
 def evaluate(model, dataloader, args):
-    from data_loaders import VOC_CLASSES
-
     model.eval()
     
     num_cam_thresholds = 1 if args.use_otsu else args.num_cam_thresholds
-    cm_list = [
-        [ConfusionMatrix(nc=_NUM_CLASSES_MAPPING[args.dataset_name], iou_thres=iou_thres) for i in range(num_cam_thresholds)]
-        for iou_thres in args.iou_thresholds
-    ]
+
 
     if args.classification_metric == 'mAP':
-        metric = metrics.MultilabelAUPRC(num_labels=_NUM_CLASSES_MAPPING[args.dataset_name])
+        cls_metric = metrics.MultilabelAUPRC(num_labels=_NUM_CLASSES_MAPPING[args.dataset_name])
     elif args.classification_metric == 'acc':
-        metric = metrics.MultilabelAccuracy()
+        cls_metric = metrics.MultilabelAccuracy()
+
+    
+    loc_metric = [
+        MeanAveragePrecision(
+            box_format="xyxy",
+            iou_type="bbox",
+            iou_thresholds=args.iou_thresholds,
+            class_metrics=args.class_metrics
+        ) for _ in range(num_cam_thresholds)
+    ]
 
     for batch_idx, (x, y) in enumerate(tqdm(dataloader)):
         x = x.cuda()
 
-        if args.localization_metric == 'gt':
-            labels = y['labels']
-        else: # args.localization_metric == 'pred'
-            labels = None
-
-        y_pred = model(x, return_cam=True, labels=labels)
+        y_pred = model(x, return_cam=True)
 
         # Eval classification
-        metric.update(y_pred['probs'], y['labels'])
+        cls_metric.update(y_pred['probs'], y['labels'])
 
         # Eval localization
+        target = process_target(y)
+
         if args.use_otsu:
             preds = get_prediction(
-                batch_cam=y_pred['cams'],
-                probs=y_pred['probs'], 
+                batch_cam=y_pred['cams'], 
+                probs=y_pred['probs'],
                 cam_threshold=None, 
-                image_size=(args.resize_size, args.resize_size),
+                image_size=(args.resize_size, args.resize_size), 
                 gaussian_ksize=args.gaussian_ksize
             )
-            process_batch(preds, cm_list, x, y, None)
+            preds = process_prediction(preds)
+            
+            loc_metric[0].update(preds, target)
         else:
             for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
                 preds = get_prediction(
-                    batch_cam=y_pred['cams'], 
-                    probs=y_pred['probs'],
+                    batch_cam=y_pred['cams'],
+                    probs=y_pred['probs'], 
                     cam_threshold=cam_threshold, 
                     image_size=(args.resize_size, args.resize_size)
                 )
-                process_batch(preds, cm_list, x, y, cam_threshold_idx)
+                preds = process_prediction(preds)
+
+                loc_metric[cam_threshold_idx].update(preds, target)
 
     # Classification result
-    result = metric.compute().item()
-    metric.reset()
+    cls_result = cls_metric.compute().item()
 
     # Localization result
-    tp, fp, fn = list(zip(*[list(zip(*[(cm.tp_fp_fn()) for cm in cm_at_iou])) for cm_at_iou in cm_list]))
-    tp = np.array(tp)
-    fp = np.array(fp)
-    fn = np.array(fn)
-
-    precision = np.divide(tp, tp + fp, out=np.zeros_like(tp), where=tp+fp!=0)
-    recall = np.divide(tp, tp + fn, out=np.zeros_like(tp), where=tp+fn!=0)
-    f1 = np.divide(2 * (precision * recall), precision + recall, out=np.zeros_like(tp), where=precision+recall!=0)
-
-    if args.print_report:
-        custom_report(precision, recall, f1, VOC_CLASSES, num_cam_thresholds)
-    
-    if not args.use_otsu and (args.plot_info or args.additional_info_path is not None):
-        plot_localization_report(precision, recall, f1, num_cam_thresholds, args.additional_info_path, args.plot_info)
+    loc_result = [m.compute() for m in loc_metric]
+    best_performing_cam_threshold_idx = np.argmax([r['map'].item() for r in loc_result])
 
     return {
-        args.classification_metric + f'_{args.split}': result,
-        'f1' + f'_{args.split}': f1.mean(2).max(1).mean(),
-        # **{
-        #     f'average_f1@{iou_thres}_{args.split}': f1.mean((1, 2))[iou_thres_idx] 
-        #    for iou_thres_idx, iou_thres in enumerate(args.iou_thresholds)
-        # },
-        # 'mean_average_precision' + f'_{args.split}': precision.mean(),
-        # **{
-        #     f'average_precision@{iou_thres}_{args.split}': precision.mean((1, 2))[iou_thres_idx] 
-        #    for iou_thres_idx, iou_thres in enumerate(args.iou_thresholds)
-        # },
-        # 'mean_average_recall' + f'_{args.split}': recall.mean(),
-        # **{
-        #     f'average_recall@{iou_thres}_{args.split}': recall.mean((1, 2))[iou_thres_idx] 
-        #    for iou_thres_idx, iou_thres in enumerate(args.iou_thresholds)
-        # },
+        f'cls_{args.classification_metric}': cls_result,
+        **loc_result[best_performing_cam_threshold_idx]
     }
 
 def main():
@@ -196,16 +196,13 @@ def main():
     parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
     parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
-    parser.add_argument('--print_report', action='store_true', help='Print localization report per class')
-    parser.add_argument('--additional_info_path', type=str, default=None, help='Path to save additional info plot')
-    parser.add_argument('--plot_info', action='store_true', help='Plot additional info')
     
     # Method arguments
     parser.add_argument('--use_otsu', action='store_true', help='Use Otsu thresholding to get bounding box')
     parser.add_argument('--gaussian_ksize', type=int, default=1, help='Gaussian kernel size for gaussian blur before Otsu thresholding')
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
     parser.add_argument('--classification_metric', type=str, default='acc', choices=['acc', 'mAP'], help='Type of classification metric')
-    parser.add_argument('--localization_metric', type=str, default='pred', choices=['pred', 'gt'], help='Whether to use prediction or ground truth labels for localization metric')
+    parser.add_argument('--class_metrics', action='store_true', help='Option to enable per-class metrics for mAP and mAR_100 for torchmetrics.detection.MeanAveragePrecision')
 
     # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
@@ -261,7 +258,10 @@ def main():
 
     # Evaluate model
     result = evaluate(model, dataloader, args)
-    print_metrics(result)
+    print(result)
+
+    # Save result to csv
+    to_csv(args, result)
     
 if __name__ == '__main__':
     main()
