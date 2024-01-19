@@ -135,6 +135,7 @@ if __name__ == "__main__":
         y = F.one_hot(torch.tensor(y), num_classes=20).sum(dim=0).float()
 
         x_batch = x.unsqueeze(0)
+        y_batch = y.unsqueeze(0)
         st.write("Image size: ", x.shape)
         st.write("Classes: ", y)
         model = get_model(args)
@@ -153,7 +154,7 @@ if __name__ == "__main__":
             if classes is None:
                 y_pred = model(x_batch.cuda(), return_cam=True)
             else:
-                y_pred = model(x_batch.cuda(), labels=y, return_cam=True)
+                y_pred = model(x_batch.cuda(), labels=y_batch, return_cam=True)
 
         orig_img = x * torch.tensor([.229, .224, .225]).view(3, 1, 1) + torch.tensor([0.485, .456, .406]).view(3, 1, 1)
         orig_img = orig_img.numpy().transpose([1, 2, 0])
