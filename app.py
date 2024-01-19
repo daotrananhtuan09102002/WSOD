@@ -152,7 +152,7 @@ if __name__ == "__main__":
         model.eval()
 
         with torch.no_grad():
-            if classes is None:
+            if len(classes) == 0:
                 y_pred = model(x_batch.cuda(), return_cam=True)
             else:
                 y_pred = model(x_batch.cuda(), labels=y_batch, return_cam=True)
