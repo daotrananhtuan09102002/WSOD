@@ -51,7 +51,7 @@ class ConfusionMatrix:
         Return intersection-over-union (Jaccard index) of boxes.
         Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
         Arguments:
-            detections (Array[N, 5]), x1, y1, x2, y2, class
+            detections (Array[N, 5]), x1, y1, x2, y2, class, confidence
             labels (Array[M, 5]), class, x1, y1, x2, y2
         Returns:
             None, updates confusion matrix accordingly

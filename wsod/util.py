@@ -45,17 +45,18 @@ def initialize_weights(modules, init_mode):
             nn.init.normal_(m.weight, 0, 0.01)
             nn.init.constant_(m.bias, 0)
 
-def get_prediction(batch_cam, cam_threshold, image_size=(224, 224), gaussian_ksize=1):
+def get_prediction(batch_cam, probs, cam_threshold, image_size=(224, 224), gaussian_ksize=1):
     """
     Args:
         batch_cam: list of cam dict per image with class index as key and cam as value
+        probs: Array[B, num_classes], probability of each class
         cam_theshold: value to threshold cam
     Returns:
-        prediciton: Array[B, None, 5], x1, y1, x2, y2, class 
+        prediciton: Array[B, None, 6], x1, y1, x2, y2, class, confidence(using class probability as confidence)
     """
     output = []
 
-    for cam_per_image in batch_cam:
+    for cam_per_image, prob in zip(batch_cam, probs):
         prediction = []
 
         for class_index, cam in cam_per_image.items():
@@ -95,10 +96,10 @@ def get_prediction(batch_cam, cam_threshold, image_size=(224, 224), gaussian_ksi
                 x1 = min(x1, width - 1)
                 y1 = min(y1, height - 1)
 
-                prediction.append([x0, y0, x1, y1, class_index])
+                prediction.append([x0, y0, x1, y1, class_index, prob[class_index].item()])
 
         if len(prediction) == 0:
-            prediction.append([-1, -1, -1, -1, -1])
+            prediction.append([-1, -1, -1, -1, -1, -1])
 
         output.append(prediction)
     return torch.nested.nested_tensor(output, dtype=torch.float32)
@@ -266,34 +267,3 @@ def custom_report(precision, recall, f1, class_names, num_cam_thresholds, digits
 
     # print mean f1 score across iou and cam thresholds
     print(f"Mean Average F1 Score: {f1.mean():.{digits}f}")
-
-def process_batch(preds, cm_list, x, y, cam_threshold_idx=None):
-    """ Process batch of predictions
-
-    Args:
-        preds: Array[B, None, 5], x1, y1, x2, y2, class
-        cm_list: list of confusion matrix at different iou thresholds
-        x: Array[B, 3, H, W], images
-        y: dict of Array[B, num_classes], labels
-    """
-    for img_idx in range(x.shape[0]):
-        pred = preds[img_idx][preds[img_idx][:, 0] != -1]
-        gt = y['bounding_boxes'][img_idx]
-
-        npred = pred.shape[0]
-
-        # model has no predictions on this image
-        if npred == 0:
-            if cam_threshold_idx is not None:
-                for cm in cm_list:
-                    cm[cam_threshold_idx].process_batch(detections=None, labels=gt)
-            else:
-                for cm in cm_list:
-                    cm[0].process_batch(detections=None, labels=gt)
-        else:
-            if cam_threshold_idx is not None:
-                for cm in cm_list:
-                    cm[cam_threshold_idx].process_batch(detections=pred, labels=gt)
-            else:
-                for cm in cm_list:
-                    cm[0].process_batch(detections=pred, labels=gt)
