@@ -159,7 +159,7 @@ if __name__ == "__main__":
         orig_img = orig_img.numpy().transpose([1, 2, 0])
         orig_img = cv2.normalize(orig_img, None, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX).astype(np.uint8)
 
-        for gt_class, cam in y_pred['cams'].items():
+        for gt_class, cam in y_pred['cams'][0].items():
             fig, axs = plt.subplots(2, 3, figsize=(12, 6), num=1, clear=True, layout="constrained")
             cam = cam.cpu().numpy()
 
@@ -192,7 +192,7 @@ if __name__ == "__main__":
             axs[0, 1].axis('off')
 
             # row 1 col 4: Bbox
-            pred = get_prediction([{gt_class: y_pred['cams'][gt_class]}], cam_threshold=cam_threshold)[0].numpy()
+            pred = get_prediction([{gt_class: y_pred['cams'][0][gt_class]}], cam_threshold=cam_threshold)[0].numpy()
 
             temp_fig = keras_cv.visualization.plot_bounding_box_gallery(
                 [orig_img],
