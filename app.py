@@ -159,7 +159,7 @@ if __name__ == "__main__":
         orig_img = orig_img.numpy().transpose([1, 2, 0])
         orig_img = cv2.normalize(orig_img, None, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX).astype(np.uint8)
 
-        st.write(y_pred['cams'][0])
+        st.write(y_pred)
         for gt_class, cam in y_pred['cams'][0].items():
             fig, axs = plt.subplots(2, 3, figsize=(12, 6), num=1, clear=True, layout="constrained")
             cam = cam.cpu().numpy()
