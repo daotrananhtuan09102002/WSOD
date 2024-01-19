@@ -129,16 +129,13 @@ if __name__ == "__main__":
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
         ])
 
-        st.write("classes: ", classes)
-
         x = tf(img)
         y = [class_ids.index(c) for c in classes]
         y = F.one_hot(torch.tensor(y), num_classes=20).sum(dim=0).float() if len(y) > 0 else None
 
         x_batch = x.unsqueeze(0)
         y_batch = y.unsqueeze(0) if y is not None else [None]
-        st.write("Image size: ", x.shape)
-        st.write("Classes: ", y)
+
         model = get_model(args)
 
         checkpoint_path = args.checkpoint_path
@@ -161,7 +158,6 @@ if __name__ == "__main__":
         orig_img = orig_img.numpy().transpose([1, 2, 0])
         orig_img = cv2.normalize(orig_img, None, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX).astype(np.uint8)
 
-        st.write(y_pred)
         for gt_class, cam in y_pred['cams'][0].items():
             fig, axs = plt.subplots(2, 3, figsize=(12, 6), num=1, clear=True, layout="constrained")
             cam = cam.cpu().numpy()
