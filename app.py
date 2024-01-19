@@ -235,7 +235,7 @@ if __name__ == "__main__":
                 axs[0, idx].axis('off')
 
                 # Bbox
-                pred = get_prediction([{gt_class: y_pred['cams'][gt_class]}], cam_threshold=None, gaussian_ksize=ksize)[0].numpy()
+                pred = get_prediction([{gt_class: y_pred['cams'][0][gt_class]}], cam_threshold=None, gaussian_ksize=ksize)[0].numpy()
 
                 temp_fig = keras_cv.visualization.plot_bounding_box_gallery(
                     [orig_img],
