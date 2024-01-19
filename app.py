@@ -130,7 +130,7 @@ if __name__ == "__main__":
             transforms.Normalize(_IMAGE_MEAN_VALUE, _IMAGE_STD_VALUE),
         ])
 
-        x = tf(img)
+        x = tf(img).unsqueeze(0)
         y = [class_ids.index(c) for c in classes] if classes is not None else None
         y = F.one_hot(torch.tensor(y), num_classes=20).sum(dim=0).float()
 
