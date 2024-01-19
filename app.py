@@ -40,7 +40,6 @@ class_ids = [
     "sofa",
     "train",
     "tvmonitor",
-    "None"
 ]
 class_mapping = dict(zip(range(len(class_ids)), class_ids))
 
@@ -132,7 +131,7 @@ if __name__ == "__main__":
 
         x = tf(img)
         y = [class_ids.index(c) for c in classes] if classes is not None else None
-        y = F.one_hot(torch.tensor(y), num_classes=20).sum(dim=0).float()
+        y = F.one_hot(torch.tensor(y), num_classes=20).sum(dim=0).float() if y is not None else None
 
         x_batch = x.unsqueeze(0)
         y_batch = y.unsqueeze(0)
