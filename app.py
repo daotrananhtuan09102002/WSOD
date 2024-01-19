@@ -132,8 +132,8 @@ if __name__ == "__main__":
         st.write("classes: ", classes)
 
         x = tf(img)
-        y = [class_ids.index(c) for c in classes] if classes is not None else None
-        y = F.one_hot(torch.tensor(y), num_classes=20).sum(dim=0).float() if classes is not None else None
+        y = [class_ids.index(c) for c in classes]
+        y = F.one_hot(torch.tensor(y), num_classes=20).sum(dim=0).float() if len(y) > 0 else [None]
 
         x_batch = x.unsqueeze(0)
         y_batch = y.unsqueeze(0)
