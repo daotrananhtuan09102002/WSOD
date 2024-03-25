@@ -116,7 +116,12 @@ def evaluate(model, dataloader, args):
         else: # args.localization_metric == 'pred'
             labels = None
 
-        y_pred = model(x, return_cam=True, labels=labels)
+        str_cam = 'ccams' if args.no_ccam > 0 else 'cams'
+
+        if args.no_ccam > 0:
+            y_pred = model(x, return_cam=True, labels=labels, no_ccam=args.no_ccam)    
+        else:
+            y_pred = model(x, return_cam=True, labels=labels)
 
         # Eval classification
         metric.update(y_pred['probs'], y['labels'])
@@ -124,7 +129,7 @@ def evaluate(model, dataloader, args):
         # Eval localization
         if args.use_otsu:
             preds = get_prediction(
-                batch_cam=y_pred['cams'],
+                batch_cam=y_pred[str_cam],
                 probs=y_pred['probs'], 
                 cam_threshold=None, 
                 image_size=(args.resize_size, args.resize_size),
@@ -134,7 +139,7 @@ def evaluate(model, dataloader, args):
         else:
             for cam_threshold_idx, cam_threshold in enumerate(np.linspace(0.0, 0.9, num_cam_thresholds)):
                 preds = get_prediction(
-                    batch_cam=y_pred['cams'], 
+                    batch_cam=y_pred[str_cam], 
                     probs=y_pred['probs'],
                     cam_threshold=cam_threshold, 
                     image_size=(args.resize_size, args.resize_size)
@@ -185,12 +190,12 @@ def main():
 
     # Data loader arguments
     parser.add_argument('--dataset_name', type=str, default='VOC', help='Dataset name')
-    parser.add_argument('--data_roots', type=str, default='./voc', help='Data roots path')
+    parser.add_argument('--data_root', type=str, default='./voc', help='Data root path')
     parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--resize_size', type=int, default=224, help='Resize size')
     parser.add_argument('--split', default='val', choices=['train', 'val', 'test'], help='Split to evaluate')
     parser.add_argument('--normalize', action='store_true', help='Whether to normalize images using ImageNet mean and std')
-    parser.add_argument('--year', type=str, default='2007', help='VOC dataset year')
+    parser.add_argument('--year', type=str, default='2007', choices=['2007', '2012'], help='VOC dataset year')
 
     # Misc arguments
     parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
@@ -206,6 +211,7 @@ def main():
     parser.add_argument('--iou_thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
     parser.add_argument('--classification_metric', type=str, default='acc', choices=['acc', 'mAP'], help='Type of classification metric')
     parser.add_argument('--localization_metric', type=str, default='pred', choices=['pred', 'gt'], help='Whether to use prediction or ground truth labels for localization metric')
+    parser.add_argument('--no_ccam', type=int, default=0, help='Number of CCAMs to use')
 
     # Model arguments
     parser.add_argument('--architecture', type=str, default='resnet50', help='Model architecture')
@@ -234,7 +240,7 @@ def main():
 
     dataloader = DataLoader(
         VOCDataset(
-            root=args.data_roots,
+            root=args.data_root,
             year=args.year,
             image_set=args.split,
             transform=tf,
