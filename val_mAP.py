@@ -94,7 +94,7 @@ def get_value_from_tensor(value):
 def to_csv(args, result):
     args_dict = vars(args)
     
-    for k in ['dataset_name', 'batch_size', 'data_root', 'log_dir', 'class_metrics', 'drop_prob', 'drop_threshold', 'pretrained']:
+    for k in ['dataset_name', 'batch_size', 'data_root', 'class_metrics', 'drop_prob', 'drop_threshold', 'pretrained']:
         args_dict.pop(k)
 
     args_dict['checkpoint_path'] = Path(args_dict['checkpoint_path']).stem
@@ -199,7 +199,6 @@ def main():
 
     # Misc arguments
     parser.add_argument('--checkpoint_path', required=True, type=str, default=None, help='Checkpoint path')
-    parser.add_argument('--log_dir', type=str, required=True, help='Log directory')
     parser.add_argument('--num_cam_thresholds', type=int, default=10, help='Number of cam thresholds')
     
     # Method arguments
@@ -252,9 +251,9 @@ def main():
 
     checkpoint_path = args.checkpoint_path
     if os.path.isfile(checkpoint_path):
-            checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint['state_dict'], strict=True)
-            print("Check {} loaded.".format(checkpoint_path))
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint['state_dict'], strict=True)
+        print("Check {} loaded.".format(checkpoint_path))
     else:
         raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
     model = torch.nn.DataParallel(model)

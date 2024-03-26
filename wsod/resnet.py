@@ -279,6 +279,7 @@ class ResNetDrop(ResNetCam):
 
             for label, feature in zip(labels, feature_map):
                 cam_per_image = dict()
+                # self.fc.weight[..., None, None] * feature[None, ...].shape = (num_classes, C, H, W)
                 for nonzeros in label.nonzero():
                     i = nonzeros.item()
                     cam_weights = self.fc.weight[i]
