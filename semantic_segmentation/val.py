@@ -58,7 +58,7 @@ def get_dataset(args):
         image_set=args.image_set, 
         year=args.year, 
         transforms=get_transform(),
-        download=not(os.path.isfile(f'../voc_segmentation/VOCdevkit/VOC{args.year}/ImageSets/Layout/{args.image_set}.txt'))
+        download=not(os.path.isfile(f'./voc_segmentation/VOCdevkit/VOC{args.year}/ImageSets/Layout/{args.image_set}.txt'))
     )
 
     return ds, num_classes
@@ -265,6 +265,7 @@ def main(args):
         'average_row_correct': best_result[1].tolist(),
         'IoU': best_result[2].tolist(),
         'mean_IoU': best_result[2].mean().item(),
+        'at_cam_threshold': np.linspace(0.0, 0.9, args.num_cam_thresholds),
     }
 
     to_csv(args, result)
@@ -274,7 +275,7 @@ def get_args_parser(add_help=True):
 
     parser = argparse.ArgumentParser(description='PyTorch Segmentation Training', add_help=add_help)
 
-    parser.add_argument('--data-path', default='../voc_segmentation', type=str, help='dataset path')
+    parser.add_argument('--data-path', default='./voc_segmentation', type=str, help='dataset path')
     parser.add_argument('--dataset', default='VOC', type=str, help='dataset name')
     parser.add_argument('--image-set', default='val', type=str, choices=['train', 'val', 'test'],help='image set')
     parser.add_argument('--year', default='2007', type=str, choices=['2007', '2012'], help='dataset year')
@@ -294,7 +295,6 @@ def get_args_parser(add_help=True):
     parser.add_argument(
         '--gaussian-ksize', type=int, default=1, help='Gaussian kernel size for gaussian blur before Otsu thresholding'
     )
-    parser.add_argument('--iou-thresholds', nargs='+', default=[0.3, 0.5, 0.7], help='IoU threshold')
     parser.add_argument('--no-ccam', type=int, default=0, help='Number of CCAMs to use')
 
     # Model arguments
